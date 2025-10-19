@@ -16,6 +16,7 @@ export default function Home() {
   const [change30d, setChange30d] = useState<{ value: string; positive: boolean } | null>(null);
   const [latestInscription, setLatestInscription] = useState('--');
   const [showGate, setShowGate] = useState(true);
+  const [isCheckingGate, setIsCheckingGate] = useState(true);
   const [showCountMeIn, setShowCountMeIn] = useState(false);
   const [contentReady, setContentReady] = useState(false);
   const gateCanvasRef = useRef<HTMLCanvasElement>(null);
@@ -26,6 +27,19 @@ export default function Home() {
   const { login, authenticated } = usePrivy();
   const { connect: connectWallet, connected, address, balance, loading } = useXverseWallet();
   const router = useRouter();
+
+  // Check if gate should be shown (once per hour)
+  useEffect(() => {
+    const lastGateTime = localStorage.getItem('lastGateTime');
+    const now = Date.now();
+    const oneHour = 60 * 60 * 1000; // 1 hour in milliseconds
+
+    if (lastGateTime && (now - parseInt(lastGateTime)) < oneHour) {
+      // Less than 1 hour since last gate view, skip it
+      setShowGate(false);
+    }
+    setIsCheckingGate(false);
+  }, []);
 
   // Matrix animation for landing gate
   useEffect(() => {
@@ -294,7 +308,8 @@ export default function Home() {
   }, [showGate]);
 
   const handleGateClick = () => {
-    localStorage.setItem('os_gate_passed', '1');
+    // Save timestamp when gate is closed (for 1 hour check)
+    localStorage.setItem('lastGateTime', Date.now().toString());
     setShowGate(false);
   };
 
@@ -309,6 +324,15 @@ export default function Home() {
       setTimeout(() => router.push('/profile'), 1000);
     }
   };
+
+  // Show loading while checking gate status
+  if (isCheckingGate) {
+    return (
+      <div className="min-h-screen bg-[#0b0c10] text-white flex items-center justify-center">
+        <div className="inline-block w-12 h-12 border-4 border-[#f7931a] border-t-transparent rounded-full animate-spin" />
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-[#0b0c10] text-white relative">

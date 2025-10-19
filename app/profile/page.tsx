@@ -33,7 +33,8 @@ export default function ProfilePage() {
     nestedSegwit,
     taproot,
     disconnect,
-    refreshBalances 
+    refreshBalances,
+    loading: walletLoading 
   } = useXverseWallet();
   const router = useRouter();
   const [userData, setUserData] = useState<UserData | null>(null);
@@ -43,6 +44,7 @@ export default function ProfilePage() {
   const [activeTab, setActiveTab] = useState<'addresses' | 'games' | 'inscriptions'>('addresses');
   const [inscriptions, setInscriptions] = useState<any[]>([]);
   const [loadingInscriptions, setLoadingInscriptions] = useState(false);
+  const [isInitializing, setIsInitializing] = useState(true);
   const canvasRef = useRef<HTMLCanvasElement>(null);
 
   // Matrix animation background
@@ -101,19 +103,27 @@ export default function ProfilePage() {
   }, []);
 
   useEffect(() => {
-    // Check if wallet is connected, if not redirect to home
-    if (!connected) {
+    // Wait for wallet to initialize from localStorage
+    const timer = setTimeout(() => {
+      setIsInitializing(false);
+    }, 500);
+    return () => clearTimeout(timer);
+  }, []);
+
+  useEffect(() => {
+    // Only redirect after initialization is complete
+    if (!isInitializing && !walletLoading && !connected) {
       router.push('/');
       return;
     }
 
     // Use wallet address as user ID
-    if (address) {
+    if (connected && address) {
       fetchUserData();
       fetchUserScores();
       fetchLeaderboard();
     }
-  }, [connected, address]);
+  }, [connected, address, isInitializing, walletLoading]);
 
   useEffect(() => {
     if (activeTab === 'inscriptions' && ordinalsAddress) {
@@ -187,6 +197,17 @@ export default function ProfilePage() {
     const secs = seconds % 60;
     return `${mins}m ${secs}s`;
   };
+
+  if (isInitializing || (walletLoading && !connected)) {
+    return (
+      <div className="min-h-screen bg-[#0b0c10] text-white flex items-center justify-center">
+        <div className="text-center">
+          <div className="inline-block w-12 h-12 border-4 border-[#f7931a] border-t-transparent rounded-full animate-spin mb-4" />
+          <div className="text-gray-400">Loading wallet...</div>
+        </div>
+      </div>
+    );
+  }
 
   if (!connected) {
     return (
@@ -458,18 +479,38 @@ export default function ProfilePage() {
                         className="group bg-gradient-to-br from-[#111317]/90 to-[#1b1c1f]/90 backdrop-blur-sm rounded-2xl border-2 border-[#f7931a]/20 hover:border-[#f7931a]/60 hover:shadow-[0_10px_40px_rgba(247,147,26,0.2)] hover:-translate-y-1 transition-all duration-300 overflow-hidden"
                       >
                         {/* Inscription Preview */}
-                        <div className="aspect-square bg-black/40 flex items-center justify-center p-4">
+                        <div className="aspect-square bg-black/40 flex items-center justify-center p-4 relative overflow-hidden">
                           {inscription.content_type?.startsWith('image/') ? (
                             <img
                               src={`https://ordinals.com/content/${inscription.id}`}
                               alt={`Inscription ${inscription.number}`}
                               className="w-full h-full object-contain"
+                              loading="lazy"
                               onError={(e) => {
-                                (e.target as HTMLImageElement).src = '/osfun.png';
+                                const img = e.target as HTMLImageElement;
+                                // Try alternative image sources
+                                if (img.src.includes('ordinals.com')) {
+                                  img.src = `https://ord-mirror.magiceden.dev/content/${inscription.id}`;
+                                } else if (img.src.includes('magiceden')) {
+                                  img.src = `https://ordinals.hiro.so/inscription/${inscription.id}/content`;
+                                } else {
+                                  // If all fail, show icon
+                                  img.style.display = 'none';
+                                  const parent = img.parentElement;
+                                  if (parent) {
+                                    parent.innerHTML = '<div class="text-[#f7931a] text-4xl">🖼️</div>';
+                                  }
+                                }
                               }}
                             />
                           ) : inscription.content_type?.startsWith('text/') ? (
                             <div className="text-[#f7931a] text-4xl">📄</div>
+                          ) : inscription.content_type?.startsWith('video/') ? (
+                            <div className="text-[#f7931a] text-4xl">🎬</div>
+                          ) : inscription.content_type?.startsWith('audio/') ? (
+                            <div className="text-[#f7931a] text-4xl">🎵</div>
+                          ) : inscription.content_type?.includes('html') ? (
+                            <div className="text-[#f7931a] text-4xl">🌐</div>
                           ) : (
                             <div className="text-[#f7931a] text-4xl">🎨</div>
                           )}
