@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import Link from 'next/link';
 import { usePrivy } from '@privy-io/react-auth';
 import { useRouter } from 'next/navigation';
@@ -29,6 +29,62 @@ export default function ProfilePage() {
   const [leaderboard, setLeaderboard] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<'stats' | 'history' | 'leaderboard'>('stats');
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+
+  // Matrix animation background
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+
+    const dpr = window.devicePixelRatio || 1;
+    canvas.width = window.innerWidth * dpr;
+    canvas.height = window.innerHeight * dpr;
+    canvas.style.width = window.innerWidth + 'px';
+    canvas.style.height = window.innerHeight + 'px';
+    ctx.scale(dpr, dpr);
+
+    const fontSize = 14;
+    const cols = Math.floor(window.innerWidth / fontSize);
+    const drops = new Array(cols).fill(1);
+    ctx.font = `${fontSize}px monospace`;
+
+    let animationId: number;
+    const drawMatrix = () => {
+      ctx.fillStyle = 'rgba(11, 12, 16, 0.08)';
+      ctx.fillRect(0, 0, window.innerWidth, window.innerHeight);
+
+      for (let i = 0; i < cols; i++) {
+        const char = Math.random() < 0.5 ? '0' : '1';
+        const x = i * fontSize;
+        const y = drops[i] * fontSize;
+        
+        const rand = Math.random();
+        if (rand < 0.03) {
+          ctx.fillStyle = '#ffffff';
+        } else if (rand < 0.10) {
+          ctx.fillStyle = '#ffd166';
+        } else {
+          ctx.fillStyle = '#f7931a';
+        }
+        
+        ctx.fillText(char, x, y);
+
+        if (y > window.innerHeight && Math.random() > 0.975) {
+          drops[i] = 0;
+        } else {
+          drops[i]++;
+        }
+      }
+      
+      animationId = requestAnimationFrame(drawMatrix);
+    };
+
+    drawMatrix();
+    return () => cancelAnimationFrame(animationId);
+  }, []);
 
   useEffect(() => {
     if (!authenticated) {
@@ -105,9 +161,12 @@ export default function ProfilePage() {
   }
 
   return (
-    <div className="min-h-screen bg-[#0b0c10] text-white">
+    <div className="min-h-screen bg-[#0b0c10] text-white relative">
+      {/* Matrix Background Canvas */}
+      <canvas ref={canvasRef} className="fixed inset-0 w-full h-full z-0" />
+
       {/* Header */}
-      <header className="bg-black/85 backdrop-blur-lg shadow-2xl flex items-center justify-between px-[10%] py-4 sticky top-0 z-50">
+      <header className="relative z-50 bg-black/85 backdrop-blur-lg shadow-2xl flex items-center justify-between px-4 md:px-[10%] py-4 sticky top-0">
         <div className="logo">
           <Link href="/">
             <img src="/osfun.png" alt="Ordinal Strategy Logo" className="h-[42px] w-auto object-contain hover:scale-105 transition-transform" />
@@ -126,25 +185,33 @@ export default function ProfilePage() {
       </header>
 
       {/* Main Content */}
-      <div className="max-w-7xl mx-auto px-4 py-12">
+      <div className="relative z-10 max-w-7xl mx-auto px-4 md:px-6 py-12">
         {/* Profile Header */}
-        <div className="bg-gradient-to-r from-[#1b1c1f] to-[#0b0c10] rounded-2xl p-8 mb-8 border border-[#f7931a]/20">
-          <div className="flex items-center gap-6">
-            <div className="w-24 h-24 bg-[#f7931a] rounded-full flex items-center justify-center text-4xl font-bold text-[#0b0c10]">
-              {userData?.twitterHandle?.[0]?.toUpperCase() || user?.twitter?.username?.[0]?.toUpperCase() || '?'}
+        <div className="bg-gradient-to-r from-[#1b1c1f]/90 via-[#0b0c10]/90 to-[#1b1c1f]/90 backdrop-blur-md rounded-3xl p-6 md:p-10 mb-8 border-2 border-[#f7931a]/30 shadow-[0_0_50px_rgba(247,147,26,0.15)] hover:shadow-[0_0_80px_rgba(247,147,26,0.25)] transition-all duration-300">
+          <div className="flex flex-col md:flex-row items-center gap-6">
+            {/* Avatar with glow effect */}
+            <div className="relative">
+              <div className="absolute inset-0 bg-[#f7931a] rounded-full blur-xl opacity-40 animate-pulse"></div>
+              <div className="relative w-28 h-28 md:w-32 md:h-32 bg-gradient-to-br from-[#f7931a] to-[#ffd166] rounded-full flex items-center justify-center text-5xl md:text-6xl font-bold text-[#0b0c10] shadow-2xl border-4 border-[#ffd166]/50">
+                {userData?.twitterHandle?.[0]?.toUpperCase() || user?.twitter?.username?.[0]?.toUpperCase() || '₿'}
+              </div>
             </div>
-            <div className="flex-1">
-              <h1 className="text-4xl font-bold text-[#f7931a] mb-2">
-                {userData?.twitterHandle || user?.twitter?.username || 'Anonymous Player'}
-              </h1>
-              <div className="flex gap-6 text-gray-300">
-                <div>
-                  <span className="text-[#ffd166] font-bold text-2xl">{userData?.gamesPlayed || 0}</span>
-                  <span className="ml-2">Games Played</span>
+            
+            <div className="flex-1 text-center md:text-left">
+              <div className="flex items-center justify-center md:justify-start gap-3 mb-3">
+                <h1 className="text-3xl md:text-5xl font-bold text-[#f7931a] drop-shadow-[0_0_20px_rgba(247,147,26,0.5)]">
+                  {userData?.twitterHandle || user?.twitter?.username || 'Anonymous Player'}
+                </h1>
+                <span className="text-2xl">🎮</span>
+              </div>
+              <div className="flex flex-wrap justify-center md:justify-start gap-4 md:gap-8 text-gray-300">
+                <div className="bg-black/40 px-4 py-2 rounded-xl border border-[#f7931a]/20 hover:border-[#f7931a]/50 transition-colors">
+                  <span className="text-[#ffd166] font-bold text-xl md:text-3xl block">{userData?.gamesPlayed || 0}</span>
+                  <span className="text-xs md:text-sm opacity-80">Games Played</span>
                 </div>
-                <div>
-                  <span className="text-[#ffd166] font-bold text-2xl">{userData?.totalScore?.toLocaleString() || 0}</span>
-                  <span className="ml-2">Total Score</span>
+                <div className="bg-black/40 px-4 py-2 rounded-xl border border-[#f7931a]/20 hover:border-[#f7931a]/50 transition-colors">
+                  <span className="text-[#ffd166] font-bold text-xl md:text-3xl block">{userData?.totalScore?.toLocaleString() || 0}</span>
+                  <span className="text-xs md:text-sm opacity-80">Total Score</span>
                 </div>
               </div>
             </div>
@@ -177,31 +244,43 @@ export default function ProfilePage() {
           <>
             {/* Stats Tab */}
             {activeTab === 'stats' && (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-                <div className="bg-[#111317] p-6 rounded-xl border border-[#f7931a]/20 hover:border-[#f7931a]/50 transition-colors">
-                  <div className="text-[#f7931a] text-sm mb-2">Best Score</div>
-                  <div className="text-3xl font-bold text-white">
-                    {scores.length > 0 ? Math.max(...scores.map(s => s.score)).toLocaleString() : 0}
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6">
+                <div className="group bg-gradient-to-br from-[#111317]/90 to-[#1b1c1f]/90 backdrop-blur-sm p-6 rounded-2xl border-2 border-[#f7931a]/20 hover:border-[#f7931a]/60 hover:shadow-[0_10px_40px_rgba(247,147,26,0.2)] hover:-translate-y-1 transition-all duration-300 relative overflow-hidden">
+                  <div className="absolute top-0 right-0 text-6xl opacity-10 group-hover:opacity-20 transition-opacity">🏆</div>
+                  <div className="relative">
+                    <div className="text-[#f7931a] text-xs md:text-sm mb-2 uppercase tracking-wider font-semibold">Best Score</div>
+                    <div className="text-3xl md:text-4xl font-bold text-white">
+                      {scores.length > 0 ? Math.max(...scores.map(s => s.score)).toLocaleString() : 0}
+                    </div>
                   </div>
                 </div>
-                <div className="bg-[#111317] p-6 rounded-xl border border-[#f7931a]/20 hover:border-[#f7931a]/50 transition-colors">
-                  <div className="text-[#f7931a] text-sm mb-2">Average Score</div>
-                  <div className="text-3xl font-bold text-white">
-                    {scores.length > 0
-                      ? Math.round(scores.reduce((sum, s) => sum + s.score, 0) / scores.length).toLocaleString()
-                      : 0}
+                <div className="group bg-gradient-to-br from-[#111317]/90 to-[#1b1c1f]/90 backdrop-blur-sm p-6 rounded-2xl border-2 border-[#f7931a]/20 hover:border-[#f7931a]/60 hover:shadow-[0_10px_40px_rgba(247,147,26,0.2)] hover:-translate-y-1 transition-all duration-300 relative overflow-hidden">
+                  <div className="absolute top-0 right-0 text-6xl opacity-10 group-hover:opacity-20 transition-opacity">📊</div>
+                  <div className="relative">
+                    <div className="text-[#f7931a] text-xs md:text-sm mb-2 uppercase tracking-wider font-semibold">Average Score</div>
+                    <div className="text-3xl md:text-4xl font-bold text-white">
+                      {scores.length > 0
+                        ? Math.round(scores.reduce((sum, s) => sum + s.score, 0) / scores.length).toLocaleString()
+                        : 0}
+                    </div>
                   </div>
                 </div>
-                <div className="bg-[#111317] p-6 rounded-xl border border-[#f7931a]/20 hover:border-[#f7931a]/50 transition-colors">
-                  <div className="text-[#f7931a] text-sm mb-2">Total Coins</div>
-                  <div className="text-3xl font-bold text-white">
-                    {scores.reduce((sum, s) => sum + (s.coinsCollected || 0), 0).toLocaleString()}
+                <div className="group bg-gradient-to-br from-[#111317]/90 to-[#1b1c1f]/90 backdrop-blur-sm p-6 rounded-2xl border-2 border-[#f7931a]/20 hover:border-[#f7931a]/60 hover:shadow-[0_10px_40px_rgba(247,147,26,0.2)] hover:-translate-y-1 transition-all duration-300 relative overflow-hidden">
+                  <div className="absolute top-0 right-0 text-6xl opacity-10 group-hover:opacity-20 transition-opacity">🪙</div>
+                  <div className="relative">
+                    <div className="text-[#f7931a] text-xs md:text-sm mb-2 uppercase tracking-wider font-semibold">Total Coins</div>
+                    <div className="text-3xl md:text-4xl font-bold text-white">
+                      {scores.reduce((sum, s) => sum + (s.coinsCollected || 0), 0).toLocaleString()}
+                    </div>
                   </div>
                 </div>
-                <div className="bg-[#111317] p-6 rounded-xl border border-[#f7931a]/20 hover:border-[#f7931a]/50 transition-colors">
-                  <div className="text-[#f7931a] text-sm mb-2">Total Play Time</div>
-                  <div className="text-3xl font-bold text-white">
-                    {formatTime(scores.reduce((sum, s) => sum + (s.playTime || 0), 0))}
+                <div className="group bg-gradient-to-br from-[#111317]/90 to-[#1b1c1f]/90 backdrop-blur-sm p-6 rounded-2xl border-2 border-[#f7931a]/20 hover:border-[#f7931a]/60 hover:shadow-[0_10px_40px_rgba(247,147,26,0.2)] hover:-translate-y-1 transition-all duration-300 relative overflow-hidden">
+                  <div className="absolute top-0 right-0 text-6xl opacity-10 group-hover:opacity-20 transition-opacity">⏱️</div>
+                  <div className="relative">
+                    <div className="text-[#f7931a] text-xs md:text-sm mb-2 uppercase tracking-wider font-semibold">Total Play Time</div>
+                    <div className="text-3xl md:text-4xl font-bold text-white">
+                      {formatTime(scores.reduce((sum, s) => sum + (s.playTime || 0), 0))}
+                    </div>
                   </div>
                 </div>
               </div>
@@ -209,7 +288,7 @@ export default function ProfilePage() {
 
             {/* History Tab */}
             {activeTab === 'history' && (
-              <div className="bg-[#111317] rounded-xl overflow-hidden border border-[#f7931a]/20">
+              <div className="bg-[#111317]/90 backdrop-blur-sm rounded-2xl overflow-hidden border-2 border-[#f7931a]/20 shadow-lg">
                 <table className="w-full">
                   <thead className="bg-[#1b1c1f]">
                     <tr>
@@ -245,7 +324,7 @@ export default function ProfilePage() {
 
             {/* Leaderboard Tab */}
             {activeTab === 'leaderboard' && (
-              <div className="bg-[#111317] rounded-xl overflow-hidden border border-[#f7931a]/20">
+              <div className="bg-[#111317]/90 backdrop-blur-sm rounded-2xl overflow-hidden border-2 border-[#f7931a]/20 shadow-lg">
                 <table className="w-full">
                   <thead className="bg-[#1b1c1f]">
                     <tr>
@@ -297,9 +376,9 @@ export default function ProfilePage() {
           <Link
             href="/foxjump"
             target="_blank"
-            className="inline-block bg-[#f7931a] text-[#0b0c10] px-10 py-4 rounded-full font-bold text-lg hover:bg-white hover:scale-105 transition-all shadow-lg"
+            className="inline-block bg-gradient-to-r from-[#f7931a] to-[#ffd166] text-[#0b0c10] px-12 py-5 rounded-full font-bold text-lg md:text-xl hover:shadow-[0_10px_50px_rgba(247,147,26,0.5)] hover:scale-110 transition-all duration-300 shadow-2xl border-2 border-[#ffd166]/50"
           >
-            🎮 Play FoxJump
+            🎮 Play FoxJump →
           </Link>
         </div>
       </div>
