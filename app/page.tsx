@@ -3,6 +3,8 @@
 import { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import { usePrivy } from '@privy-io/react-auth';
+import { useRouter } from 'next/navigation';
+import ScrollButton from '@/components/ScrollButton';
 
 export default function Home() {
   const [blockHeight, setBlockHeight] = useState('--');
@@ -21,6 +23,7 @@ export default function Home() {
   const rocketRef = useRef<HTMLDivElement>(null);
   const progressBarRef = useRef<HTMLDivElement>(null);
   const { login, authenticated } = usePrivy();
+  const router = useRouter();
 
   // Matrix animation for landing gate
   useEffect(() => {
@@ -291,12 +294,15 @@ export default function Home() {
             <div className="text-[1.4rem] leading-relaxed mb-5 text-shadow-[0_0_6px_rgba(247,147,26,0.35)]">
               "The Times 03/Jan/2009 Chancellor on brink of second bailout for banks"
             </div>
-            <button
-              onClick={handleGateClick}
-              className="bg-[#f7931a] text-[#0b0c10] px-6 py-2.5 rounded-full font-bold shadow-lg hover:brightness-110 hover:scale-105 active:scale-95 transition-all"
-            >
-              COMMIT CHANGES
-            </button>
+            <div className="flex justify-center">
+              <ScrollButton
+                text="Commit Changes"
+                onComplete={handleGateClick}
+                backgroundColor="#f7931a"
+                textColor="#0b0c10"
+                accentColor="#ffffff"
+              />
+            </div>
           </div>
         </div>
       )}
@@ -428,12 +434,13 @@ export default function Home() {
               <p className="text-center max-w-3xl mb-8 text-lg">
                 Ordinals are the art of precision join us in mastering the strategy.
               </p>
-              <button
-                onClick={handleCountMeIn}
-                className="bg-[#f7931a] text-[#0b0c10] px-8 py-3 rounded-full font-bold hover:bg-white hover:text-black hover:scale-105 transition-all shadow-lg"
-              >
-                Join
-              </button>
+              <ScrollButton
+                text="Join"
+                onComplete={handleCountMeIn}
+                backgroundColor="#f7931a"
+                textColor="#0b0c10"
+                accentColor="#ffffff"
+              />
             </section>
 
             {/* Mechanics Section */}
@@ -471,10 +478,14 @@ export default function Home() {
                 <p className="text-xl mb-6 max-w-2xl">
                   Ordinal Strategy is a framework for research, tracking, and optimization across Bitcoin Ordinals, built for collectors, creators, and strategists.
                 </p>
-                <div className="flex gap-4 justify-center flex-wrap">
-                  <Link href="/strategy" className="bg-[#f7931a] text-[#0b0c10] px-7 py-3 rounded-full font-bold hover:bg-white hover:text-black hover:scale-105 transition-all shadow-lg">
-                    Explore Strategy
-                  </Link>
+                <div className="flex gap-4 justify-center flex-wrap items-center">
+                  <ScrollButton
+                    text="Explore Strategy"
+                    onComplete={() => router.push('/strategy')}
+                    backgroundColor="#f7931a"
+                    textColor="#0b0c10"
+                    accentColor="#ffffff"
+                  />
                   <a href="#about" className="bg-transparent border-2 border-[#f7931a] text-[#f7931a] px-7 py-3 rounded-full font-bold hover:bg-[#f7931a] hover:text-[#0b0c10] transition-all">
                     Learn More
           </a>
