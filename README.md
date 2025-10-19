@@ -63,7 +63,7 @@ PRIVY_APP_SECRET=your_privy_app_secret_here
 
 # MongoDB Configuration
 MONGODB_URI=mongodb://localhost:27017/ordinalstrategy
-# Or use MongoDB Atlas: mongodb+srv://username:password@cluster.mongodb.net/ordinalstrategy
+# Or use MongoDB Atlas: mongodb+srv://<username>:<password>@<cluster>.mongodb.net/ordinalstrategy
 
 # API Keys
 ORDISCAN_API_KEY=***REMOVED***

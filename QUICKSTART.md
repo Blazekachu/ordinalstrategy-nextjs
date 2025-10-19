@@ -36,7 +36,7 @@ npm install
 4. Copy connection string
 5. Update `.env.local`:
    ```bash
-   MONGODB_URI=mongodb+srv://username:password@cluster.mongodb.net/ordinalstrategy
+   MONGODB_URI=mongodb+srv://<username>:<password>@<cluster>.mongodb.net/ordinalstrategy
    ```
 
 ### Option B: Use Local MongoDB
