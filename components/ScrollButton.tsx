@@ -28,9 +28,7 @@ export default function ScrollButton({
   useEffect(() => {
     if (progress >= threshold && !completed) {
       setCompleted(true);
-      setTimeout(() => {
-        onComplete();
-      }, 200);
+      onComplete();
     }
   }, [progress, completed, onComplete]);
 
@@ -73,7 +71,7 @@ export default function ScrollButton({
   return (
     <div
       ref={containerRef}
-      className="relative w-full max-w-md h-16 rounded-full overflow-hidden cursor-pointer select-none"
+      className="relative w-full max-w-[280px] h-14 rounded-full overflow-hidden cursor-pointer select-none"
       style={{
         backgroundColor: `${backgroundColor}20`,
         border: `2px solid ${backgroundColor}`,
@@ -90,13 +88,13 @@ export default function ScrollButton({
 
       {/* Text */}
       <div
-        className="absolute inset-0 flex items-center justify-center font-bold text-lg pointer-events-none z-10"
+        className="absolute inset-0 flex items-center justify-center font-bold text-base pointer-events-none z-10"
         style={{
           color: progress > 0.5 ? accentColor : backgroundColor,
           transition: 'color 0.2s',
         }}
       >
-        {completed ? '✓ ACTIVATED' : `→ ${text.toUpperCase()}`}
+        {`→ ${text.toUpperCase()}`}
       </div>
 
       {/* Draggable Handle */}
@@ -105,7 +103,7 @@ export default function ScrollButton({
         onPointerDown={handlePointerDown}
         onPointerMove={handlePointerMove}
         onPointerUp={handlePointerUp}
-        className="absolute top-1 bottom-1 w-14 rounded-full transition-transform duration-200 touch-none z-20"
+        className="absolute top-1 bottom-1 w-12 rounded-full transition-transform duration-200 touch-none z-20"
         style={{
           ...handleStyle,
           backgroundColor: backgroundColor,
@@ -114,22 +112,12 @@ export default function ScrollButton({
         }}
       >
         <div
-          className="w-full h-full flex items-center justify-center text-2xl"
+          className="w-full h-full flex items-center justify-center text-xl"
           style={{ color: textColor }}
         >
-          {completed ? '✓' : '→'}
+          →
         </div>
       </div>
-
-      {/* Hint Text (only show when not dragging and not completed) */}
-      {!isDragging && !completed && progress === 0 && (
-        <div
-          className="absolute right-4 top-1/2 -translate-y-1/2 text-xs opacity-60 pointer-events-none animate-pulse"
-          style={{ color: backgroundColor }}
-        >
-          slide →
-        </div>
-      )}
     </div>
   );
 }
