@@ -151,22 +151,21 @@ export default function Home() {
     };
   }, [showGate]);
 
-  // Scroll to bottom immediately on load (for scroll-up effect)
+  // Set content ready when gate is closed
   useEffect(() => {
-    if (!showGate && siteRef.current) {
-      // Hide content initially
-      setContentReady(false);
-      
-      // Scroll to bottom instantly (before content is visible)
-      requestAnimationFrame(() => {
-        if (siteRef.current) {
-          siteRef.current.scrollTop = siteRef.current.scrollHeight;
-          // Show content after scroll is set
-          setTimeout(() => setContentReady(true), 50);
-        }
-      });
+    if (!showGate) {
+      setContentReady(true);
     }
   }, [showGate]);
+
+  // Ref callback to set initial scroll position immediately on mount
+  const siteRefCallback = (node: HTMLDivElement | null) => {
+    if (node) {
+      siteRef.current = node;
+      // Set scroll to bottom immediately when element is mounted
+      node.scrollTop = node.scrollHeight;
+    }
+  };
 
   // Rocket click handler - scroll up
   const handleRocketClick = () => {
@@ -400,8 +399,8 @@ export default function Home() {
 
           {/* Main Scrollable Content */}
           <div 
-            ref={siteRef} 
-            className={`h-screen overflow-y-auto scroll-smooth snap-y snap-mandatory pb-[72px] relative z-10 transition-opacity duration-300 ${contentReady ? 'opacity-100' : 'opacity-0'}`}
+            ref={siteRefCallback}
+            className={`h-screen overflow-y-auto scroll-smooth snap-y snap-mandatory pb-[72px] relative z-10 transition-opacity duration-200 ${contentReady ? 'opacity-100' : 'opacity-0'}`}
           >
             {/* Footer - First in DOM for scroll-up effect */}
             <footer className="bg-[#090a0d] text-center py-8 text-gray-500 text-sm snap-start">
