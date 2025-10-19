@@ -1,10 +1,24 @@
 'use client';
 
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
+import { usePrivy } from '@privy-io/react-auth';
+import ScrollButton from '@/components/ScrollButton';
 
 export default function StrategyPage() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const [showCountMeIn, setShowCountMeIn] = useState(false);
+  const { login, authenticated } = usePrivy();
+
+  const handleCountMeIn = () => {
+    setShowCountMeIn(true);
+  };
+
+  const handleTwitterConnect = async () => {
+    if (!authenticated) {
+      await login();
+    }
+  };
 
   // Matrix animation with custom characters
   useEffect(() => {
@@ -72,6 +86,35 @@ export default function StrategyPage() {
       {/* Matrix Background Canvas */}
       <canvas ref={canvasRef} className="fixed inset-0 w-full h-full z-0" />
 
+      {/* Count Me In Modal */}
+      {showCountMeIn && (
+        <div className="fixed inset-0 z-[10001] flex items-center justify-center bg-black/35 backdrop-blur-lg p-4">
+          <div className="relative max-w-[600px] w-full bg-black/35 border border-[#f7931a]/45 rounded-2xl shadow-2xl p-6 md:p-8 text-center font-mono">
+            <button
+              onClick={() => setShowCountMeIn(false)}
+              className="absolute top-3 right-3 md:top-4 md:right-4 text-2xl text-gray-400 hover:text-[#f7931a]"
+            >
+              &times;
+            </button>
+            <div className="text-lg md:text-xl tracking-[0.2em] uppercase text-[#f7931a] mb-3">
+              Join Ordinal Strategy
+            </div>
+            <div className="text-sm md:text-base text-gray-300 mb-6">
+              Connect to verify your identity and join our community
+            </div>
+            <button
+              onClick={handleTwitterConnect}
+              className="bg-[#1da1f2] text-white px-5 md:px-6 py-2.5 md:py-3 rounded-lg font-semibold hover:bg-[#0d8bd9] hover:-translate-y-0.5 transition-all inline-flex items-center gap-2 text-sm md:text-base"
+            >
+              🔐 Connect Account
+            </button>
+            <div className="text-xs text-gray-500 mt-4">
+              We only verify your identity. No posting permissions required.
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Header */}
       <header className="fixed top-0 left-0 right-0 z-[1000] bg-black/85 backdrop-blur-lg shadow-2xl flex items-center justify-between px-[10%] py-4">
         <div className="logo">
@@ -136,30 +179,90 @@ export default function StrategyPage() {
             <div className="mt-12">
               <h2 className="text-3xl text-[#f7931a] mb-8 text-center font-semibold">How It Works</h2>
               
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {[
-                  { icon: '📊', title: 'Price Monitoring', text: 'Continuously track $ordstrategytoken price against threshold $X to determine optimal protocol action.' },
-                  { icon: '💰', title: 'Daily Allocation', text: 'Protocol automatically spends $N daily, ensuring consistent market activity and balanced growth.' },
-                  { icon: '🔥', title: 'Buy & Burn', text: 'When price is below threshold, tokens are purchased and burned, reducing supply and supporting price.' },
-                  { icon: '🎯', title: 'Asset Acquisition', text: 'When price exceeds threshold, funds are used to acquire strategic assets, building treasury value.' },
-                  { icon: '⚖️', title: 'Balance Mechanism', text: 'This dual approach balances token holder value with asset backing, creating sustainable growth.' },
-                  { icon: '🚀', title: 'Community Driven', text: 'Transparent, algorithmic strategy that benefits all participants through smart economic design.' },
-                ].map((item, i) => (
-                  <div key={i} className="bg-white/5 border border-[#f7931a]/20 rounded-2xl p-8 hover:bg-white/8 hover:border-[#f7931a]/50 hover:-translate-y-1 hover:shadow-[0_10px_30px_rgba(247,147,26,0.2)] transition-all duration-300 relative overflow-hidden group">
-                    <div className="absolute top-0 left-0 w-full h-[3px] bg-gradient-to-r from-[#f7931a] to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
-                    <span className="text-4xl block mb-4">{item.icon}</span>
-                    <h4 className="text-xl text-[#f7931a] mb-3 font-semibold">{item.title}</h4>
-                    <p className="text-gray-300 leading-relaxed">{item.text}</p>
-                  </div>
-                ))}
+              {/* Infinite Scrolling Blocks Container */}
+              <div className="relative overflow-hidden">
+                {/* Gradient overlays for fade effect */}
+                <div className="absolute left-0 top-0 bottom-0 w-20 md:w-32 bg-gradient-to-r from-[#0b0c10] to-transparent z-10 pointer-events-none" />
+                <div className="absolute right-0 top-0 bottom-0 w-20 md:w-32 bg-gradient-to-l from-[#0b0c10] to-transparent z-10 pointer-events-none" />
+                
+                {/* Scrolling wrapper */}
+                <div className="flex gap-6 animate-scroll">
+                  {/* First set of blocks */}
+                  {[
+                    { icon: '📊', title: 'Price Monitoring', text: 'Continuously track $ordstrategytoken price against threshold $X to determine optimal protocol action.' },
+                    { icon: '💰', title: 'Daily Allocation', text: 'Protocol automatically spends $N daily, ensuring consistent market activity and balanced growth.' },
+                    { icon: '🔥', title: 'Buy & Burn', text: 'When price is below threshold, tokens are purchased and burned, reducing supply and supporting price.' },
+                    { icon: '🎯', title: 'Asset Acquisition', text: 'When price exceeds threshold, funds are used to acquire strategic assets, building treasury value.' },
+                    { icon: '⚖️', title: 'Balance Mechanism', text: 'This dual approach balances token holder value with asset backing, creating sustainable growth.' },
+                    { icon: '🚀', title: 'Community Driven', text: 'Transparent, algorithmic strategy that benefits all participants through smart economic design.' },
+                  ].map((item, i) => (
+                    <div key={i} className="flex-shrink-0 w-[320px] md:w-[380px] bg-white/5 border border-[#f7931a]/20 rounded-2xl p-6 md:p-8 hover:bg-white/8 hover:border-[#f7931a]/50 hover:shadow-[0_10px_30px_rgba(247,147,26,0.2)] transition-all duration-300 relative overflow-hidden group">
+                      <div className="absolute top-0 left-0 w-full h-[3px] bg-gradient-to-r from-[#f7931a] to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
+                      <span className="text-4xl block mb-4">{item.icon}</span>
+                      <h4 className="text-xl text-[#f7931a] mb-3 font-semibold">{item.title}</h4>
+                      <p className="text-gray-300 leading-relaxed text-sm md:text-base">{item.text}</p>
+                    </div>
+                  ))}
+                  {/* Duplicate set for seamless loop */}
+                  {[
+                    { icon: '📊', title: 'Price Monitoring', text: 'Continuously track $ordstrategytoken price against threshold $X to determine optimal protocol action.' },
+                    { icon: '💰', title: 'Daily Allocation', text: 'Protocol automatically spends $N daily, ensuring consistent market activity and balanced growth.' },
+                    { icon: '🔥', title: 'Buy & Burn', text: 'When price is below threshold, tokens are purchased and burned, reducing supply and supporting price.' },
+                    { icon: '🎯', title: 'Asset Acquisition', text: 'When price exceeds threshold, funds are used to acquire strategic assets, building treasury value.' },
+                    { icon: '⚖️', title: 'Balance Mechanism', text: 'This dual approach balances token holder value with asset backing, creating sustainable growth.' },
+                    { icon: '🚀', title: 'Community Driven', text: 'Transparent, algorithmic strategy that benefits all participants through smart economic design.' },
+                  ].map((item, i) => (
+                    <div key={`dup-${i}`} className="flex-shrink-0 w-[320px] md:w-[380px] bg-white/5 border border-[#f7931a]/20 rounded-2xl p-6 md:p-8 hover:bg-white/8 hover:border-[#f7931a]/50 hover:shadow-[0_10px_30px_rgba(247,147,26,0.2)] transition-all duration-300 relative overflow-hidden group">
+                      <div className="absolute top-0 left-0 w-full h-[3px] bg-gradient-to-r from-[#f7931a] to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
+                      <span className="text-4xl block mb-4">{item.icon}</span>
+                      <h4 className="text-xl text-[#f7931a] mb-3 font-semibold">{item.title}</h4>
+                      <p className="text-gray-300 leading-relaxed text-sm md:text-base">{item.text}</p>
+                    </div>
+                  ))}
+                </div>
               </div>
             </div>
+            
+            {/* Add the animation styles */}
+            <style jsx>{`
+              @keyframes scroll {
+                0% {
+                  transform: translateX(0);
+                }
+                100% {
+                  transform: translateX(calc(-320px * 6 - 24px * 6));
+                }
+              }
+              
+              @media (min-width: 768px) {
+                @keyframes scroll {
+                  0% {
+                    transform: translateX(0);
+                  }
+                  100% {
+                    transform: translateX(calc(-380px * 6 - 24px * 6));
+                  }
+                }
+              }
+              
+              .animate-scroll {
+                animation: scroll 40s linear infinite;
+              }
+              
+              .animate-scroll:hover {
+                animation-play-state: paused;
+              }
+            `}</style>
 
             {/* Action Buttons */}
-            <div className="flex justify-center gap-5 mt-12 flex-wrap">
-              <Link href="/#community" className="bg-[#f7931a] text-[#0b0c10] px-9 py-4 rounded-full font-bold text-base hover:bg-white hover:text-black hover:scale-105 shadow-[0_5px_20px_rgba(247,147,26,0.3)] transition-all">
-                Join Community
-              </Link>
+            <div className="flex justify-center gap-5 mt-12 flex-wrap items-center">
+              <ScrollButton
+                text="Join"
+                onComplete={handleCountMeIn}
+                backgroundColor="#f7931a"
+                textColor="#0b0c10"
+                accentColor="#ffffff"
+              />
               <Link href="/" className="bg-transparent border-2 border-[#f7931a] text-[#f7931a] px-9 py-4 rounded-full font-bold text-base hover:bg-[#f7931a] hover:text-[#0b0c10] transition-all">
                 Back to Home
               </Link>

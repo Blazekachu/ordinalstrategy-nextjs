@@ -438,8 +438,6 @@ export default function Home() {
             </div>
             <nav className="flex gap-2 md:gap-2.5">
               <a href="#about" className="text-[#f7931a] font-medium hover:text-white transition-colors text-xs md:text-base">About</a>
-              <a href="#mechanics" className="text-[#f7931a] font-medium hover:text-white transition-colors text-xs md:text-base hidden sm:inline">How It Works</a>
-              <a href="#mechanics" className="text-[#f7931a] font-medium hover:text-white transition-colors text-xs md:text-base sm:hidden">How</a>
               <a href="#community" className="text-[#f7931a] font-medium hover:text-white transition-colors text-xs md:text-base">Community</a>
             </nav>
           </header>
@@ -469,23 +467,6 @@ export default function Home() {
               />
             </section>
 
-            {/* Mechanics Section */}
-            <section id="mechanics" className="min-h-screen flex flex-col justify-center items-center px-6 md:px-[10%] py-24 snap-start">
-              <h3 className="text-3xl md:text-4xl text-[#f7931a] mb-12 text-center">How It Works</h3>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 md:gap-8 w-full max-w-6xl">
-                {[
-                  { icon: '🔍', title: 'Track', text: 'Monitor Ordinal activity across blocks with precision.' },
-                  { icon: '⚙️', title: 'Analyze', text: 'Study rarity, metadata, and market behavior in real time.' },
-                  { icon: '🧾', title: 'Curate', text: 'Organize collections and optimize your strategy portfolio.' },
-                  { icon: '🔗', title: 'Share', text: 'Collaborate and share your research across the ecosystem.' },
-                ].map((item, i) => (
-                  <div key={i} className="bg-[#111317] p-6 md:p-8 rounded-2xl text-center hover:bg-[#1d1f25] transition-colors">
-                    <h4 className="text-2xl md:text-3xl mb-3">{item.icon} {item.title}</h4>
-                    <p className="text-gray-300 text-sm md:text-base">{item.text}</p>
-                  </div>
-                ))}
-              </div>
-            </section>
 
             {/* About Section */}
             <section id="about" className="min-h-screen flex flex-col justify-center items-center px-6 md:px-[10%] py-24 snap-start">
