@@ -3,17 +3,26 @@
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { request, AddressPurpose } from 'sats-connect';
 
+interface AddressInfo {
+  address: string;
+  balance: number | null;
+}
+
 interface WalletState {
   connected: boolean;
   address: string | null;
   ordinalsAddress: string | null;
   balance: number | null;
+  nativeSegwit: AddressInfo | null;
+  nestedSegwit: AddressInfo | null;
+  taproot: AddressInfo | null;
   loading: boolean;
 }
 
 interface XverseWalletContextType extends WalletState {
   connect: () => Promise<void>;
   disconnect: () => void;
+  refreshBalances: () => Promise<void>;
 }
 
 const XverseWalletContext = createContext<XverseWalletContextType | undefined>(undefined);
@@ -24,6 +33,9 @@ export function XverseWalletProvider({ children }: { children: ReactNode }) {
     address: null,
     ordinalsAddress: null,
     balance: null,
+    nativeSegwit: null,
+    nestedSegwit: null,
+    taproot: null,
     loading: false,
   });
 
@@ -55,6 +67,30 @@ export function XverseWalletProvider({ children }: { children: ReactNode }) {
     }
   };
 
+  const refreshBalances = async () => {
+    if (walletState.nativeSegwit?.address) {
+      const balance = await fetchBalance(walletState.nativeSegwit.address);
+      setWalletState(prev => ({
+        ...prev,
+        nativeSegwit: prev.nativeSegwit ? { ...prev.nativeSegwit, balance } : null,
+      }));
+    }
+    if (walletState.nestedSegwit?.address) {
+      const balance = await fetchBalance(walletState.nestedSegwit.address);
+      setWalletState(prev => ({
+        ...prev,
+        nestedSegwit: prev.nestedSegwit ? { ...prev.nestedSegwit, balance } : null,
+      }));
+    }
+    if (walletState.taproot?.address) {
+      const balance = await fetchBalance(walletState.taproot.address);
+      setWalletState(prev => ({
+        ...prev,
+        taproot: prev.taproot ? { ...prev.taproot, balance } : null,
+      }));
+    }
+  };
+
   const connect = async () => {
     setWalletState(prev => ({ ...prev, loading: true }));
     
@@ -79,18 +115,20 @@ export function XverseWalletProvider({ children }: { children: ReactNode }) {
         if (paymentAddress) localStorage.setItem('xverse_address', paymentAddress);
         if (ordinalsAddress) localStorage.setItem('xverse_ordinals_address', ordinalsAddress);
 
+        // Fetch balances for all addresses
+        const paymentBalance = paymentAddress ? await fetchBalance(paymentAddress) : null;
+        const ordinalsBalance = ordinalsAddress ? await fetchBalance(ordinalsAddress) : null;
+
         setWalletState({
           connected: true,
           address: paymentAddress,
           ordinalsAddress: ordinalsAddress,
-          balance: null,
+          balance: paymentBalance,
+          nativeSegwit: paymentAddress ? { address: paymentAddress, balance: paymentBalance } : null,
+          nestedSegwit: null, // Xverse primarily uses native segwit
+          taproot: ordinalsAddress ? { address: ordinalsAddress, balance: ordinalsBalance } : null,
           loading: false,
         });
-
-        // Fetch balance
-        if (paymentAddress) {
-          await fetchBalance(paymentAddress);
-        }
       } else {
         setWalletState(prev => ({ ...prev, loading: false }));
         console.error('Failed to connect wallet');
@@ -109,12 +147,15 @@ export function XverseWalletProvider({ children }: { children: ReactNode }) {
       address: null,
       ordinalsAddress: null,
       balance: null,
+      nativeSegwit: null,
+      nestedSegwit: null,
+      taproot: null,
       loading: false,
     });
   };
 
   return (
-    <XverseWalletContext.Provider value={{ ...walletState, connect, disconnect }}>
+    <XverseWalletContext.Provider value={{ ...walletState, connect, disconnect, refreshBalances }}>
       {children}
     </XverseWalletContext.Provider>
   );

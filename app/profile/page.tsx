@@ -24,13 +24,25 @@ interface UserData {
 
 export default function ProfilePage() {
   const { user, authenticated, logout } = usePrivy();
-  const { connected, address, ordinalsAddress, balance, disconnect } = useXverseWallet();
+  const { 
+    connected, 
+    address, 
+    ordinalsAddress, 
+    balance, 
+    nativeSegwit,
+    nestedSegwit,
+    taproot,
+    disconnect,
+    refreshBalances 
+  } = useXverseWallet();
   const router = useRouter();
   const [userData, setUserData] = useState<UserData | null>(null);
   const [scores, setScores] = useState<GameScore[]>([]);
   const [leaderboard, setLeaderboard] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState<'stats' | 'history' | 'leaderboard'>('stats');
+  const [activeTab, setActiveTab] = useState<'addresses' | 'games' | 'inscriptions'>('addresses');
+  const [inscriptions, setInscriptions] = useState<any[]>([]);
+  const [loadingInscriptions, setLoadingInscriptions] = useState(false);
   const canvasRef = useRef<HTMLCanvasElement>(null);
 
   // Matrix animation background
@@ -103,6 +115,12 @@ export default function ProfilePage() {
     }
   }, [connected, address]);
 
+  useEffect(() => {
+    if (activeTab === 'inscriptions' && ordinalsAddress) {
+      fetchInscriptions();
+    }
+  }, [activeTab, ordinalsAddress]);
+
   const fetchUserData = async () => {
     try {
       const response = await fetch(`/api/user?privyId=${user?.id}`);
@@ -132,6 +150,25 @@ export default function ProfilePage() {
       setLeaderboard(data.scores || []);
     } catch (error) {
       console.error('Error fetching leaderboard:', error);
+    }
+  };
+
+  const fetchInscriptions = async () => {
+    if (!ordinalsAddress) return;
+    
+    setLoadingInscriptions(true);
+    try {
+      // Try Hiro API first
+      const response = await fetch(
+        `https://api.hiro.so/ordinals/v1/inscriptions?address=${ordinalsAddress}&limit=60`
+      );
+      const data = await response.json();
+      setInscriptions(data.results || []);
+    } catch (error) {
+      console.error('Error fetching inscriptions:', error);
+      setInscriptions([]);
+    } finally {
+      setLoadingInscriptions(false);
     }
   };
 
@@ -230,22 +267,26 @@ export default function ProfilePage() {
           </div>
         </div>
 
-        {/* Tabs */}
-        <div className="flex gap-4 mb-8 border-b border-gray-700">
-          {['stats', 'history', 'leaderboard'].map((tab) => (
-            <button
-              key={tab}
-              onClick={() => setActiveTab(tab as any)}
-              className={`px-6 py-3 font-semibold capitalize transition-colors ${
-                activeTab === tab
-                  ? 'text-[#f7931a] border-b-2 border-[#f7931a]'
-                  : 'text-gray-400 hover:text-white'
-              }`}
-            >
-              {tab}
-            </button>
-          ))}
-        </div>
+            {/* Tabs */}
+            <div className="flex gap-4 mb-8 border-b border-gray-700">
+              {[
+                { key: 'addresses', label: 'Addresses & Sats' },
+                { key: 'games', label: 'Games' },
+                { key: 'inscriptions', label: 'Inscriptions' }
+              ].map((tab) => (
+                <button
+                  key={tab.key}
+                  onClick={() => setActiveTab(tab.key as any)}
+                  className={`px-6 py-3 font-semibold transition-colors ${
+                    activeTab === tab.key
+                      ? 'text-[#f7931a] border-b-2 border-[#f7931a]'
+                      : 'text-gray-400 hover:text-white'
+                  }`}
+                >
+                  {tab.label}
+                </button>
+              ))}
+            </div>
 
         {/* Tab Content */}
         {loading ? (
@@ -254,130 +295,225 @@ export default function ProfilePage() {
           </div>
         ) : (
           <>
-            {/* Stats Tab */}
-            {activeTab === 'stats' && (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6">
-                <div className="group bg-gradient-to-br from-[#111317]/90 to-[#1b1c1f]/90 backdrop-blur-sm p-6 rounded-2xl border-2 border-[#f7931a]/20 hover:border-[#f7931a]/60 hover:shadow-[0_10px_40px_rgba(247,147,26,0.2)] hover:-translate-y-1 transition-all duration-300 relative overflow-hidden">
-                  <div className="absolute top-0 right-0 text-6xl opacity-10 group-hover:opacity-20 transition-opacity">🏆</div>
-                  <div className="relative">
-                    <div className="text-[#f7931a] text-xs md:text-sm mb-2 uppercase tracking-wider font-semibold">Best Score</div>
-                    <div className="text-3xl md:text-4xl font-bold text-white">
-                      {scores.length > 0 ? Math.max(...scores.map(s => s.score)).toLocaleString() : 0}
+            {/* Addresses & Sats Tab */}
+            {activeTab === 'addresses' && (
+              <div className="space-y-6">
+                {/* Native SegWit */}
+                {nativeSegwit && (
+                  <div className="group bg-gradient-to-br from-[#111317]/90 to-[#1b1c1f]/90 backdrop-blur-sm p-6 rounded-2xl border-2 border-[#f7931a]/20 hover:border-[#f7931a]/60 hover:shadow-[0_10px_40px_rgba(247,147,26,0.2)] transition-all duration-300">
+                    <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+                      <div className="flex-1">
+                        <div className="text-[#f7931a] text-sm mb-2 uppercase tracking-wider font-semibold flex items-center gap-2">
+                          <span className="text-2xl">🔐</span>
+                          Native SegWit (bc1q...)
+                        </div>
+                        <div className="text-white font-mono text-sm break-all bg-black/40 p-3 rounded-lg">
+                          {nativeSegwit.address}
+                        </div>
+                      </div>
+                      <div className="text-right">
+                        <div className="text-3xl font-bold text-[#ffd166]">
+                          {nativeSegwit.balance !== null ? nativeSegwit.balance.toFixed(8) : '...'}
+                        </div>
+                        <div className="text-sm text-gray-400">BTC</div>
+                      </div>
                     </div>
                   </div>
-                </div>
-                <div className="group bg-gradient-to-br from-[#111317]/90 to-[#1b1c1f]/90 backdrop-blur-sm p-6 rounded-2xl border-2 border-[#f7931a]/20 hover:border-[#f7931a]/60 hover:shadow-[0_10px_40px_rgba(247,147,26,0.2)] hover:-translate-y-1 transition-all duration-300 relative overflow-hidden">
-                  <div className="absolute top-0 right-0 text-6xl opacity-10 group-hover:opacity-20 transition-opacity">📊</div>
-                  <div className="relative">
-                    <div className="text-[#f7931a] text-xs md:text-sm mb-2 uppercase tracking-wider font-semibold">Average Score</div>
-                    <div className="text-3xl md:text-4xl font-bold text-white">
-                      {scores.length > 0
-                        ? Math.round(scores.reduce((sum, s) => sum + s.score, 0) / scores.length).toLocaleString()
-                        : 0}
+                )}
+
+                {/* Taproot */}
+                {taproot && (
+                  <div className="group bg-gradient-to-br from-[#111317]/90 to-[#1b1c1f]/90 backdrop-blur-sm p-6 rounded-2xl border-2 border-[#f7931a]/20 hover:border-[#f7931a]/60 hover:shadow-[0_10px_40px_rgba(247,147,26,0.2)] transition-all duration-300">
+                    <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+                      <div className="flex-1">
+                        <div className="text-[#f7931a] text-sm mb-2 uppercase tracking-wider font-semibold flex items-center gap-2">
+                          <span className="text-2xl">🎨</span>
+                          Taproot / Ordinals (bc1p...)
+                        </div>
+                        <div className="text-white font-mono text-sm break-all bg-black/40 p-3 rounded-lg">
+                          {taproot.address}
+                        </div>
+                      </div>
+                      <div className="text-right">
+                        <div className="text-3xl font-bold text-[#ffd166]">
+                          {taproot.balance !== null ? taproot.balance.toFixed(8) : '...'}
+                        </div>
+                        <div className="text-sm text-gray-400">BTC</div>
+                      </div>
                     </div>
                   </div>
-                </div>
-                <div className="group bg-gradient-to-br from-[#111317]/90 to-[#1b1c1f]/90 backdrop-blur-sm p-6 rounded-2xl border-2 border-[#f7931a]/20 hover:border-[#f7931a]/60 hover:shadow-[0_10px_40px_rgba(247,147,26,0.2)] hover:-translate-y-1 transition-all duration-300 relative overflow-hidden">
-                  <div className="absolute top-0 right-0 text-6xl opacity-10 group-hover:opacity-20 transition-opacity">🪙</div>
-                  <div className="relative">
-                    <div className="text-[#f7931a] text-xs md:text-sm mb-2 uppercase tracking-wider font-semibold">Total Coins</div>
-                    <div className="text-3xl md:text-4xl font-bold text-white">
-                      {scores.reduce((sum, s) => sum + (s.coinsCollected || 0), 0).toLocaleString()}
-                    </div>
-                  </div>
-                </div>
-                <div className="group bg-gradient-to-br from-[#111317]/90 to-[#1b1c1f]/90 backdrop-blur-sm p-6 rounded-2xl border-2 border-[#f7931a]/20 hover:border-[#f7931a]/60 hover:shadow-[0_10px_40px_rgba(247,147,26,0.2)] hover:-translate-y-1 transition-all duration-300 relative overflow-hidden">
-                  <div className="absolute top-0 right-0 text-6xl opacity-10 group-hover:opacity-20 transition-opacity">⏱️</div>
-                  <div className="relative">
-                    <div className="text-[#f7931a] text-xs md:text-sm mb-2 uppercase tracking-wider font-semibold">Total Play Time</div>
-                    <div className="text-3xl md:text-4xl font-bold text-white">
-                      {formatTime(scores.reduce((sum, s) => sum + (s.playTime || 0), 0))}
-                    </div>
-                  </div>
+                )}
+
+                {/* Refresh Button */}
+                <div className="flex justify-center pt-4">
+                  <button
+                    onClick={refreshBalances}
+                    className="bg-[#f7931a] text-[#0b0c10] px-6 py-3 rounded-lg font-semibold hover:bg-[#ffd166] hover:-translate-y-0.5 transition-all flex items-center gap-2"
+                  >
+                    🔄 Refresh Balances
+                  </button>
                 </div>
               </div>
             )}
 
-            {/* History Tab */}
-            {activeTab === 'history' && (
-              <div className="bg-[#111317]/90 backdrop-blur-sm rounded-2xl overflow-hidden border-2 border-[#f7931a]/20 shadow-lg">
-                <table className="w-full">
-                  <thead className="bg-[#1b1c1f]">
-                    <tr>
-                      <th className="px-6 py-4 text-left text-[#f7931a] font-semibold">Date</th>
-                      <th className="px-6 py-4 text-left text-[#f7931a] font-semibold">Score</th>
-                      <th className="px-6 py-4 text-left text-[#f7931a] font-semibold">Level</th>
-                      <th className="px-6 py-4 text-left text-[#f7931a] font-semibold">Coins</th>
-                      <th className="px-6 py-4 text-left text-[#f7931a] font-semibold">Play Time</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {scores.length > 0 ? (
-                      scores.map((score) => (
-                        <tr key={score._id} className="border-t border-gray-700 hover:bg-[#1b1c1f] transition-colors">
-                          <td className="px-6 py-4 text-gray-300">{formatDate(score.createdAt)}</td>
-                          <td className="px-6 py-4 text-white font-bold">{score.score.toLocaleString()}</td>
-                          <td className="px-6 py-4 text-gray-300">{score.level}</td>
-                          <td className="px-6 py-4 text-yellow-400">{score.coinsCollected}</td>
-                          <td className="px-6 py-4 text-gray-300">{formatTime(score.playTime)}</td>
+            {/* Games Tab */}
+            {activeTab === 'games' && (
+              <div className="space-y-8">
+                {/* Stats Cards */}
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6">
+                  <div className="group bg-gradient-to-br from-[#111317]/90 to-[#1b1c1f]/90 backdrop-blur-sm p-6 rounded-2xl border-2 border-[#f7931a]/20 hover:border-[#f7931a]/60 hover:shadow-[0_10px_40px_rgba(247,147,26,0.2)] hover:-translate-y-1 transition-all duration-300 relative overflow-hidden">
+                    <div className="absolute top-0 right-0 text-6xl opacity-10 group-hover:opacity-20 transition-opacity">🏆</div>
+                    <div className="relative">
+                      <div className="text-[#f7931a] text-xs md:text-sm mb-2 uppercase tracking-wider font-semibold">Best Score</div>
+                      <div className="text-3xl md:text-4xl font-bold text-white">
+                        {scores.length > 0 ? Math.max(...scores.map(s => s.score)).toLocaleString() : 0}
+                      </div>
+                    </div>
+                  </div>
+                  <div className="group bg-gradient-to-br from-[#111317]/90 to-[#1b1c1f]/90 backdrop-blur-sm p-6 rounded-2xl border-2 border-[#f7931a]/20 hover:border-[#f7931a]/60 hover:shadow-[0_10px_40px_rgba(247,147,26,0.2)] hover:-translate-y-1 transition-all duration-300 relative overflow-hidden">
+                    <div className="absolute top-0 right-0 text-6xl opacity-10 group-hover:opacity-20 transition-opacity">📊</div>
+                    <div className="relative">
+                      <div className="text-[#f7931a] text-xs md:text-sm mb-2 uppercase tracking-wider font-semibold">Average Score</div>
+                      <div className="text-3xl md:text-4xl font-bold text-white">
+                        {scores.length > 0
+                          ? Math.round(scores.reduce((sum, s) => sum + s.score, 0) / scores.length).toLocaleString()
+                          : 0}
+                      </div>
+                    </div>
+                  </div>
+                  <div className="group bg-gradient-to-br from-[#111317]/90 to-[#1b1c1f]/90 backdrop-blur-sm p-6 rounded-2xl border-2 border-[#f7931a]/20 hover:border-[#f7931a]/60 hover:shadow-[0_10px_40px_rgba(247,147,26,0.2)] hover:-translate-y-1 transition-all duration-300 relative overflow-hidden">
+                    <div className="absolute top-0 right-0 text-6xl opacity-10 group-hover:opacity-20 transition-opacity">🪙</div>
+                    <div className="relative">
+                      <div className="text-[#f7931a] text-xs md:text-sm mb-2 uppercase tracking-wider font-semibold">Total Coins</div>
+                      <div className="text-3xl md:text-4xl font-bold text-white">
+                        {scores.reduce((sum, s) => sum + (s.coinsCollected || 0), 0).toLocaleString()}
+                      </div>
+                    </div>
+                  </div>
+                  <div className="group bg-gradient-to-br from-[#111317]/90 to-[#1b1c1f]/90 backdrop-blur-sm p-6 rounded-2xl border-2 border-[#f7931a]/20 hover:border-[#f7931a]/60 hover:shadow-[0_10px_40px_rgba(247,147,26,0.2)] hover:-translate-y-1 transition-all duration-300 relative overflow-hidden">
+                    <div className="absolute top-0 right-0 text-6xl opacity-10 group-hover:opacity-20 transition-opacity">⏱️</div>
+                    <div className="relative">
+                      <div className="text-[#f7931a] text-xs md:text-sm mb-2 uppercase tracking-wider font-semibold">Total Play Time</div>
+                      <div className="text-3xl md:text-4xl font-bold text-white">
+                        {formatTime(scores.reduce((sum, s) => sum + (s.playTime || 0), 0))}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Game History Table */}
+                <div className="bg-[#111317]/90 backdrop-blur-sm rounded-2xl overflow-hidden border-2 border-[#f7931a]/20 shadow-lg">
+                  <div className="bg-[#1b1c1f] px-6 py-4 border-b border-gray-700">
+                    <h3 className="text-xl font-bold text-[#f7931a]">Game History</h3>
+                  </div>
+                  <div className="overflow-x-auto">
+                    <table className="w-full">
+                      <thead className="bg-[#1b1c1f]/50">
+                        <tr>
+                          <th className="px-6 py-4 text-left text-[#f7931a] font-semibold">Date</th>
+                          <th className="px-6 py-4 text-left text-[#f7931a] font-semibold">Score</th>
+                          <th className="px-6 py-4 text-left text-[#f7931a] font-semibold">Level</th>
+                          <th className="px-6 py-4 text-left text-[#f7931a] font-semibold">Coins</th>
+                          <th className="px-6 py-4 text-left text-[#f7931a] font-semibold">Play Time</th>
                         </tr>
-                      ))
-                    ) : (
-                      <tr>
-                        <td colSpan={5} className="px-6 py-12 text-center text-gray-400">
-                          No games played yet. <Link href="/foxjump" className="text-[#f7931a] hover:underline">Play now!</Link>
-                        </td>
-                      </tr>
-                    )}
-                  </tbody>
-                </table>
+                      </thead>
+                      <tbody>
+                        {scores.length > 0 ? (
+                          scores.map((score) => (
+                            <tr key={score._id} className="border-t border-gray-700 hover:bg-[#1b1c1f]/30 transition-colors">
+                              <td className="px-6 py-4 text-gray-300">{formatDate(score.createdAt)}</td>
+                              <td className="px-6 py-4 text-white font-bold">{score.score.toLocaleString()}</td>
+                              <td className="px-6 py-4 text-gray-300">{score.level}</td>
+                              <td className="px-6 py-4 text-yellow-400">{score.coinsCollected}</td>
+                              <td className="px-6 py-4 text-gray-300">{formatTime(score.playTime)}</td>
+                            </tr>
+                          ))
+                        ) : (
+                          <tr>
+                            <td colSpan={5} className="px-6 py-12 text-center text-gray-400">
+                              No games played yet. <Link href="/foxjump" className="text-[#f7931a] hover:underline">Play now!</Link>
+                            </td>
+                          </tr>
+                        )}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
               </div>
             )}
 
-            {/* Leaderboard Tab */}
-            {activeTab === 'leaderboard' && (
-              <div className="bg-[#111317]/90 backdrop-blur-sm rounded-2xl overflow-hidden border-2 border-[#f7931a]/20 shadow-lg">
-                <table className="w-full">
-                  <thead className="bg-[#1b1c1f]">
-                    <tr>
-                      <th className="px-6 py-4 text-left text-[#f7931a] font-semibold">Rank</th>
-                      <th className="px-6 py-4 text-left text-[#f7931a] font-semibold">Player</th>
-                      <th className="px-6 py-4 text-left text-[#f7931a] font-semibold">Score</th>
-                      <th className="px-6 py-4 text-left text-[#f7931a] font-semibold">Level</th>
-                      <th className="px-6 py-4 text-left text-[#f7931a] font-semibold">Date</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {leaderboard.map((entry, index) => (
-                      <tr
-                        key={entry._id}
-                        className={`border-t border-gray-700 hover:bg-[#1b1c1f] transition-colors ${
-                          entry.userId?.privyId === user?.id ? 'bg-[#f7931a]/10' : ''
-                        }`}
+            {/* Inscriptions Tab */}
+            {activeTab === 'inscriptions' && (
+              <div>
+                {loadingInscriptions ? (
+                  <div className="text-center py-12">
+                    <div className="inline-block w-12 h-12 border-4 border-[#f7931a] border-t-transparent rounded-full animate-spin mb-4" />
+                    <div className="text-gray-400">Loading inscriptions...</div>
+                  </div>
+                ) : inscriptions.length > 0 ? (
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                    {inscriptions.map((inscription: any) => (
+                      <div
+                        key={inscription.id}
+                        className="group bg-gradient-to-br from-[#111317]/90 to-[#1b1c1f]/90 backdrop-blur-sm rounded-2xl border-2 border-[#f7931a]/20 hover:border-[#f7931a]/60 hover:shadow-[0_10px_40px_rgba(247,147,26,0.2)] hover:-translate-y-1 transition-all duration-300 overflow-hidden"
                       >
-                        <td className="px-6 py-4">
-                          <span className={`font-bold text-xl ${
-                            index === 0 ? 'text-yellow-400' :
-                            index === 1 ? 'text-gray-300' :
-                            index === 2 ? 'text-orange-600' :
-                            'text-gray-500'
-                          }`}>
-                            {index + 1}
-                          </span>
-                        </td>
-                        <td className="px-6 py-4 text-white font-medium">
-                          {entry.userId?.twitterHandle || 'Anonymous'}
-                          {entry.userId?.privyId === user?.id && (
-                            <span className="ml-2 text-xs text-[#f7931a]">(You)</span>
+                        {/* Inscription Preview */}
+                        <div className="aspect-square bg-black/40 flex items-center justify-center p-4">
+                          {inscription.content_type?.startsWith('image/') ? (
+                            <img
+                              src={`https://ordinals.com/content/${inscription.id}`}
+                              alt={`Inscription ${inscription.number}`}
+                              className="w-full h-full object-contain"
+                              onError={(e) => {
+                                (e.target as HTMLImageElement).src = '/osfun.png';
+                              }}
+                            />
+                          ) : inscription.content_type?.startsWith('text/') ? (
+                            <div className="text-[#f7931a] text-4xl">📄</div>
+                          ) : (
+                            <div className="text-[#f7931a] text-4xl">🎨</div>
                           )}
-                        </td>
-                        <td className="px-6 py-4 text-white font-bold text-lg">{entry.score.toLocaleString()}</td>
-                        <td className="px-6 py-4 text-gray-300">{entry.level}</td>
-                        <td className="px-6 py-4 text-gray-400 text-sm">{formatDate(entry.createdAt)}</td>
-                      </tr>
+                        </div>
+
+                        {/* Inscription Details */}
+                        <div className="p-4 space-y-2">
+                          <div className="flex items-center justify-between">
+                            <span className="text-[#f7931a] font-bold text-lg">
+                              #{inscription.number?.toLocaleString() || 'N/A'}
+                            </span>
+                            <a
+                              href={`https://ordinals.com/inscription/${inscription.id}`}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="text-xs text-gray-400 hover:text-[#f7931a] transition-colors"
+                            >
+                              View ↗
+                            </a>
+                          </div>
+                          <div className="text-xs text-gray-400 font-mono break-all">
+                            {inscription.id.slice(0, 12)}...{inscription.id.slice(-8)}
+                          </div>
+                          <div className="flex items-center justify-between text-xs">
+                            <span className="text-gray-500">
+                              {inscription.content_type || 'Unknown'}
+                            </span>
+                            <span className="text-gray-500">
+                              {inscription.content_length ? `${(inscription.content_length / 1024).toFixed(1)} KB` : 'N/A'}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
                     ))}
-                  </tbody>
-                </table>
+                  </div>
+                ) : (
+                  <div className="text-center py-12 bg-[#111317]/90 backdrop-blur-sm rounded-2xl border-2 border-[#f7931a]/20">
+                    <div className="text-6xl mb-4">🎨</div>
+                    <div className="text-xl text-[#f7931a] mb-2">No Inscriptions Found</div>
+                    <div className="text-gray-400">
+                      Your taproot address doesn't have any inscriptions yet.
+                    </div>
+                  </div>
+                )}
               </div>
             )}
           </>
