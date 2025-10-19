@@ -4,6 +4,7 @@ import { useEffect, useState, useRef } from 'react';
 import Link from 'next/link';
 import { usePrivy } from '@privy-io/react-auth';
 import { useRouter } from 'next/navigation';
+import { useXverseWallet } from '@/components/XverseWalletProvider';
 
 interface GameScore {
   _id: string;
@@ -23,6 +24,7 @@ interface UserData {
 
 export default function ProfilePage() {
   const { user, authenticated, logout } = usePrivy();
+  const { connected, address, ordinalsAddress, balance, disconnect } = useXverseWallet();
   const router = useRouter();
   const [userData, setUserData] = useState<UserData | null>(null);
   const [scores, setScores] = useState<GameScore[]>([]);
@@ -87,17 +89,19 @@ export default function ProfilePage() {
   }, []);
 
   useEffect(() => {
-    if (!authenticated) {
+    // Check if wallet is connected, if not redirect to home
+    if (!connected) {
       router.push('/');
       return;
     }
 
-    if (user?.id) {
+    // Use wallet address as user ID
+    if (address) {
       fetchUserData();
       fetchUserScores();
       fetchLeaderboard();
     }
-  }, [authenticated, user]);
+  }, [connected, address]);
 
   const fetchUserData = async () => {
     try {
@@ -147,11 +151,12 @@ export default function ProfilePage() {
     return `${mins}m ${secs}s`;
   };
 
-  if (!authenticated) {
+  if (!connected) {
     return (
       <div className="min-h-screen bg-[#0b0c10] text-white flex items-center justify-center">
         <div className="text-center">
-          <h1 className="text-3xl font-bold text-[#f7931a] mb-4">Please log in to view your profile</h1>
+          <h1 className="text-3xl font-bold text-[#f7931a] mb-4">Please connect your wallet</h1>
+          <p className="text-gray-400 mb-6">Connect your Xverse wallet to access your profile</p>
           <Link href="/" className="bg-[#f7931a] text-[#0b0c10] px-6 py-3 rounded-full font-bold hover:bg-white hover:scale-105 transition-all">
             Go Home
           </Link>
@@ -176,10 +181,10 @@ export default function ProfilePage() {
           <Link href="/" className="text-[#f7931a] font-medium hover:text-white transition-colors">Home</Link>
           <Link href="/strategy" className="text-[#f7931a] font-medium hover:text-white transition-colors">Strategy</Link>
           <button
-            onClick={() => logout()}
+            onClick={() => { disconnect(); router.push('/'); }}
             className="bg-red-600 text-white px-4 py-2 rounded-lg font-medium hover:bg-red-700 transition-colors"
           >
-            Logout
+            Disconnect
           </button>
         </nav>
       </header>
@@ -193,16 +198,23 @@ export default function ProfilePage() {
             <div className="relative">
               <div className="absolute inset-0 bg-[#f7931a] rounded-full blur-xl opacity-40 animate-pulse"></div>
               <div className="relative w-28 h-28 md:w-32 md:h-32 bg-gradient-to-br from-[#f7931a] to-[#ffd166] rounded-full flex items-center justify-center text-5xl md:text-6xl font-bold text-[#0b0c10] shadow-2xl border-4 border-[#ffd166]/50">
-                {userData?.twitterHandle?.[0]?.toUpperCase() || user?.twitter?.username?.[0]?.toUpperCase() || '₿'}
+                ₿
               </div>
             </div>
             
             <div className="flex-1 text-center md:text-left">
-              <div className="flex items-center justify-center md:justify-start gap-3 mb-3">
-                <h1 className="text-3xl md:text-5xl font-bold text-[#f7931a] drop-shadow-[0_0_20px_rgba(247,147,26,0.5)]">
-                  {userData?.twitterHandle || user?.twitter?.username || 'Anonymous Player'}
-                </h1>
-                <span className="text-2xl">🎮</span>
+              <div className="flex flex-col items-center md:items-start gap-2 mb-3">
+                <div className="flex items-center gap-2">
+                  <h1 className="text-2xl md:text-3xl font-bold text-[#f7931a] drop-shadow-[0_0_20px_rgba(247,147,26,0.5)] break-all">
+                    {address && `${address.slice(0, 8)}...${address.slice(-8)}`}
+                  </h1>
+                  <span className="text-2xl">🎮</span>
+                </div>
+                {balance !== null && (
+                  <div className="bg-black/60 px-4 py-2 rounded-lg border border-[#f7931a]/30">
+                    <span className="text-[#ffd166] font-bold text-lg md:text-xl">{balance.toFixed(8)} BTC</span>
+                  </div>
+                )}
               </div>
               <div className="flex flex-wrap justify-center md:justify-start gap-4 md:gap-8 text-gray-300">
                 <div className="bg-black/40 px-4 py-2 rounded-xl border border-[#f7931a]/20 hover:border-[#f7931a]/50 transition-colors">

@@ -3,20 +3,25 @@
 import { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import { usePrivy } from '@privy-io/react-auth';
+import { useRouter } from 'next/navigation';
 import ScrollButton from '@/components/ScrollButton';
+import { useXverseWallet } from '@/components/XverseWalletProvider';
 
 export default function StrategyPage() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [showCountMeIn, setShowCountMeIn] = useState(false);
   const { login, authenticated } = usePrivy();
+  const { connect: connectWallet, connected, address, balance, loading } = useXverseWallet();
+  const router = useRouter();
 
   const handleCountMeIn = () => {
     setShowCountMeIn(true);
   };
 
-  const handleTwitterConnect = async () => {
-    if (!authenticated) {
-      await login();
+  const handleWalletConnect = async () => {
+    await connectWallet();
+    if (!loading && address) {
+      setTimeout(() => router.push('/profile'), 1000);
     }
   };
 
@@ -100,16 +105,35 @@ export default function StrategyPage() {
               Join Ordinal Strategy
             </div>
             <div className="text-sm md:text-base text-gray-300 mb-6">
-              Connect to verify your identity and join our community
+              Connect your Bitcoin wallet to join our community
             </div>
-            <button
-              onClick={handleTwitterConnect}
-              className="bg-[#1da1f2] text-white px-5 md:px-6 py-2.5 md:py-3 rounded-lg font-semibold hover:bg-[#0d8bd9] hover:-translate-y-0.5 transition-all inline-flex items-center gap-2 text-sm md:text-base"
-            >
-              🔐 Connect Account
-            </button>
+            {connected ? (
+              <div className="space-y-3">
+                <div className="bg-green-500/20 border border-green-500/50 rounded-lg p-4">
+                  <div className="text-green-400 font-semibold mb-2">✓ Wallet Connected</div>
+                  <div className="text-sm text-gray-300 break-all">{address}</div>
+                  {balance !== null && (
+                    <div className="text-[#f7931a] font-bold mt-2">{balance.toFixed(8)} BTC</div>
+                  )}
+                </div>
+                <button
+                  onClick={() => router.push('/profile')}
+                  className="bg-[#f7931a] text-[#0b0c10] w-full px-6 py-3 rounded-lg font-semibold hover:bg-[#ffd166] hover:-translate-y-0.5 transition-all"
+                >
+                  Go to Profile →
+                </button>
+              </div>
+            ) : (
+              <button
+                onClick={handleWalletConnect}
+                disabled={loading}
+                className="bg-gradient-to-r from-[#f7931a] to-[#ffd166] text-[#0b0c10] px-5 md:px-6 py-2.5 md:py-3 rounded-lg font-semibold hover:shadow-lg hover:-translate-y-0.5 transition-all inline-flex items-center gap-2 text-sm md:text-base disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {loading ? '🔄 Connecting...' : '₿ Connect Xverse Wallet'}
+              </button>
+            )}
             <div className="text-xs text-gray-500 mt-4">
-              We only verify your identity. No posting permissions required.
+              Bitcoin & Ordinals wallet required. Make sure Xverse is installed.
             </div>
           </div>
         </div>
