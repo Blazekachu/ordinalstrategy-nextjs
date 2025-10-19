@@ -34,14 +34,9 @@ export default function Home() {
     const now = Date.now();
     const oneHour = 60 * 60 * 1000; // 1 hour in milliseconds
 
-    console.log('Gate check:', { lastGateTime, now, diff: lastGateTime ? now - parseInt(lastGateTime) : 'none' });
-
     if (lastGateTime && (now - parseInt(lastGateTime)) < oneHour) {
-      // Less than 1 hour since last gate view, skip it
-      console.log('Skipping gate - last seen less than 1 hour ago');
       setShowGate(false);
     } else {
-      console.log('Showing gate');
       setShowGate(true);
     }
     setIsCheckingGate(false);
@@ -49,74 +44,63 @@ export default function Home() {
 
   // Matrix animation for landing gate
   useEffect(() => {
-    console.log('Matrix animation useEffect called', { showGate, hasCanvas: !!gateCanvasRef.current });
     if (!showGate || !gateCanvasRef.current) return;
 
-    console.log('Starting matrix animation...');
     const canvas = gateCanvasRef.current;
     const ctx = canvas.getContext('2d');
-    if (!ctx) {
-      console.error('No canvas context!');
-      return;
-    }
+    if (!ctx) return;
 
-    const dpr = window.devicePixelRatio || 1;
-    canvas.width = window.innerWidth * dpr;
-    canvas.height = window.innerHeight * dpr;
-    canvas.style.width = window.innerWidth + 'px';
-    canvas.style.height = window.innerHeight + 'px';
-    ctx.scale(dpr, dpr);
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight;
 
-    // Fill canvas with black initially
+    // Fill with black
     ctx.fillStyle = '#000000';
-    ctx.fillRect(0, 0, window.innerWidth, window.innerHeight);
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-    const fontSize = 20;
-    const cols = Math.floor(window.innerWidth / fontSize);
-    const drops = new Array(cols).fill(1).map(() => Math.random() * -100);
-    ctx.font = `bold ${fontSize}px "Courier New", monospace`;
+    const fontSize = 24;
+    const cols = Math.floor(canvas.width / fontSize);
+    const drops: number[] = [];
+    for (let i = 0; i < cols; i++) {
+      drops[i] = Math.floor(Math.random() * canvas.height / fontSize);
+    }
 
     let animationId: number;
     const drawMatrix = () => {
-      // Very light fade so text stays visible longer
-      ctx.fillStyle = 'rgba(0, 0, 0, 0.03)';
-      ctx.fillRect(0, 0, window.innerWidth, window.innerHeight);
+      // Slight fade effect
+      ctx.fillStyle = 'rgba(0, 0, 0, 0.04)';
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-      ctx.shadowBlur = 15;
+      ctx.font = `bold ${fontSize}px monospace`;
       
-      for (let i = 0; i < cols; i++) {
-        const char = Math.random() < 0.5 ? '0' : '1';
+      for (let i = 0; i < drops.length; i++) {
+        const text = Math.random() > 0.5 ? '1' : '0';
         const x = i * fontSize;
         const y = drops[i] * fontSize;
         
-        // More highlights for better visibility
-        const highlight = Math.random() < 0.1;
-        
-        if (highlight) {
-          ctx.fillStyle = '#ffffff';
-          ctx.shadowColor = '#ffffff';
+        // Random brightness
+        if (Math.random() > 0.9) {
+          ctx.fillStyle = '#fff';
+          ctx.shadowBlur = 20;
+          ctx.shadowColor = '#fff';
         } else {
           ctx.fillStyle = '#f7931a';
+          ctx.shadowBlur = 10;
           ctx.shadowColor = '#f7931a';
         }
         
-        ctx.fillText(char, x, y);
+        ctx.fillText(text, x, y);
 
-        // Reset drop to top when it reaches bottom
-        if (y > window.innerHeight && Math.random() > 0.975) {
+        if (y > canvas.height && Math.random() > 0.95) {
           drops[i] = 0;
-        } else {
-          drops[i]++;
         }
+        drops[i]++;
       }
       
       animationId = requestAnimationFrame(drawMatrix);
     };
 
     drawMatrix();
-    return () => {
-      cancelAnimationFrame(animationId);
-    };
+    return () => cancelAnimationFrame(animationId);
   }, [showGate]);
 
   // Matrix background animation for main site
@@ -373,10 +357,10 @@ export default function Home() {
     <div className="min-h-screen bg-[#0b0c10] text-white relative">
       {/* Landing Overlay */}
       {showGate && (
-        <div className="fixed inset-0 z-[10000] flex items-center justify-center p-4 bg-black">
-          <canvas ref={gateCanvasRef} className="absolute inset-0 w-full h-full z-0" style={{ backgroundColor: '#000' }} />
-          <div className="absolute inset-0 bg-transparent z-[1]" />
-          <div className="relative z-[10001] max-w-[720px] w-full bg-black/80 border border-[#f7931a]/45 rounded-2xl shadow-2xl p-5 md:p-7 text-center font-mono backdrop-blur-md">
+        <div className="fixed inset-0 z-[10000] bg-black">
+          <canvas ref={gateCanvasRef} className="absolute inset-0 w-full h-full" style={{ display: 'block', opacity: 1, zIndex: 1 }} />
+          <div className="absolute inset-0 flex items-center justify-center p-4" style={{ zIndex: 2 }}>
+            <div className="relative max-w-[720px] w-full bg-black/90 border border-[#f7931a]/45 rounded-2xl shadow-2xl p-5 md:p-7 text-center font-mono backdrop-blur-sm">
             <div className="text-xs md:text-sm tracking-[0.2em] uppercase text-[#f7931a] mb-2">
               Bitcoin Genesis — 03 Jan 2009
             </div>
