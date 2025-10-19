@@ -170,8 +170,28 @@ export default function Home() {
 
   // Check if gate was passed
   useEffect(() => {
-    const passed = localStorage.getItem('os_gate_passed');
-    if (passed === '1') setShowGate(false);
+    try {
+      const passed = localStorage.getItem('os_gate_passed');
+      if (passed === '1') {
+        setShowGate(false);
+      }
+    } catch (e) {
+      // If localStorage is blocked, show gate
+      setShowGate(true);
+    }
+  }, []);
+
+  // Add keyboard shortcut to reset gate (Ctrl+Shift+R on gate)
+  useEffect(() => {
+    const handleKeyPress = (e: KeyboardEvent) => {
+      if (e.ctrlKey && e.shiftKey && e.key === 'G') {
+        localStorage.removeItem('os_gate_passed');
+        setShowGate(true);
+        window.location.reload();
+      }
+    };
+    window.addEventListener('keydown', handleKeyPress);
+    return () => window.removeEventListener('keydown', handleKeyPress);
   }, []);
 
   // Bitcoin data fetching
@@ -431,8 +451,8 @@ export default function Home() {
                   </Link>
                   <a href="#about" className="bg-transparent border-2 border-[#f7931a] text-[#f7931a] px-7 py-3 rounded-full font-bold hover:bg-[#f7931a] hover:text-[#0b0c10] transition-all">
                     Learn More
-                  </a>
-                </div>
+          </a>
+        </div>
               </div>
             </section>
           </div>
