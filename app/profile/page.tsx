@@ -44,7 +44,6 @@ export default function ProfilePage() {
   const [activeTab, setActiveTab] = useState<'addresses' | 'games' | 'inscriptions'>('addresses');
   const [inscriptions, setInscriptions] = useState<any[]>([]);
   const [loadingInscriptions, setLoadingInscriptions] = useState(false);
-  const [isInitializing, setIsInitializing] = useState(true);
   const canvasRef = useRef<HTMLCanvasElement>(null);
 
   // Matrix animation background
@@ -103,16 +102,8 @@ export default function ProfilePage() {
   }, []);
 
   useEffect(() => {
-    // Wait for wallet to initialize from localStorage
-    const timer = setTimeout(() => {
-      setIsInitializing(false);
-    }, 500);
-    return () => clearTimeout(timer);
-  }, []);
-
-  useEffect(() => {
-    // Only redirect after initialization is complete
-    if (!isInitializing && !walletLoading && !connected) {
+    // Only redirect after wallet loading is complete
+    if (!walletLoading && !connected) {
       router.push('/');
       return;
     }
@@ -123,7 +114,7 @@ export default function ProfilePage() {
       fetchUserScores();
       fetchLeaderboard();
     }
-  }, [connected, address, isInitializing, walletLoading]);
+  }, [connected, address, walletLoading]);
 
   useEffect(() => {
     if (activeTab === 'inscriptions' && ordinalsAddress) {
@@ -198,7 +189,7 @@ export default function ProfilePage() {
     return `${mins}m ${secs}s`;
   };
 
-  if (isInitializing || (walletLoading && !connected)) {
+  if (walletLoading) {
     return (
       <div className="min-h-screen bg-[#0b0c10] text-white flex items-center justify-center">
         <div className="text-center">

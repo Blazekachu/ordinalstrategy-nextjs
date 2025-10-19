@@ -36,13 +36,14 @@ export function XverseWalletProvider({ children }: { children: ReactNode }) {
     nativeSegwit: null,
     nestedSegwit: null,
     taproot: null,
-    loading: false,
+    loading: true, // Start as loading to check localStorage
   });
 
   useEffect(() => {
     // Check if wallet was previously connected
     const savedAddress = localStorage.getItem('xverse_address');
     const savedOrdinalsAddress = localStorage.getItem('xverse_ordinals_address');
+    
     if (savedAddress && savedOrdinalsAddress) {
       const initBalance = async () => {
         const balance = await fetchBalance(savedAddress);
@@ -54,9 +55,13 @@ export function XverseWalletProvider({ children }: { children: ReactNode }) {
           balance,
           nativeSegwit: { address: savedAddress, balance },
           taproot: { address: savedOrdinalsAddress, balance: null },
+          loading: false,
         }));
       };
       initBalance();
+    } else {
+      // No saved wallet, set loading to false
+      setWalletState(prev => ({ ...prev, loading: false }));
     }
   }, []);
 
