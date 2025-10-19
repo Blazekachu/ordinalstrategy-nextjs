@@ -151,19 +151,25 @@ export default function Home() {
     };
   }, [showGate]);
 
-  // Set content ready when gate is closed
+  // Reset content ready when gate is closed
   useEffect(() => {
     if (!showGate) {
-      setContentReady(true);
+      setContentReady(false); // Hide content initially
     }
   }, [showGate]);
 
   // Ref callback to set initial scroll position immediately on mount
   const siteRefCallback = (node: HTMLDivElement | null) => {
-    if (node) {
+    if (node && !showGate) {
       siteRef.current = node;
       // Set scroll to bottom immediately when element is mounted
       node.scrollTop = node.scrollHeight;
+      // Show content after scroll is set (next frame)
+      requestAnimationFrame(() => {
+        requestAnimationFrame(() => {
+          setContentReady(true);
+        });
+      });
     }
   };
 
@@ -322,7 +328,7 @@ export default function Home() {
           )}
 
           {/* Progress Bar Container */}
-          <div className="fixed top-0 right-[18px] w-[8px] h-full bg-white/6 rounded-[10px] overflow-hidden z-[9998]">
+          <div className={`fixed top-0 right-[18px] w-[8px] h-full bg-white/6 rounded-[10px] overflow-hidden z-[9998] transition-opacity duration-200 ${contentReady ? 'opacity-100' : 'opacity-0'}`}>
             <div
               ref={progressBarRef}
               className="absolute bottom-0 left-0 w-full h-[2%] bg-[#f7931a] rounded-t-[10px] transition-[height,box-shadow] duration-[120ms] linear"
@@ -334,7 +340,7 @@ export default function Home() {
           <div
             ref={rocketRef}
             onClick={handleRocketClick}
-            className="fixed right-[6px] bottom-0 w-[50px] h-[50px] z-[9999] cursor-pointer transition-[bottom,transform] duration-[250ms] linear origin-center"
+            className={`fixed right-[6px] bottom-0 w-[50px] h-[50px] z-[9999] cursor-pointer transition-[bottom,transform,opacity] duration-[250ms] linear origin-center ${contentReady ? 'opacity-100' : 'opacity-0'}`}
           >
             <img
               src="/rocket.png"
@@ -345,7 +351,7 @@ export default function Home() {
           </div>
 
           {/* Mempool Bar */}
-          <div className="fixed left-0 right-0 bottom-[72px] z-[1001] bg-[#0f1116] backdrop-blur border-t border-white/10 border-b border-white/6 px-[10%] py-0.5">
+          <div className={`fixed left-0 right-0 bottom-[72px] z-[1001] bg-[#0f1116] backdrop-blur border-t border-white/10 border-b border-white/6 px-[10%] py-0.5 transition-opacity duration-200 ${contentReady ? 'opacity-100' : 'opacity-0'}`}>
             <div className="flex flex-wrap justify-center gap-3 text-[#f7931a] font-semibold text-sm">
               <span>🟠 Block: {blockHeight}</span>
               <span>Txns: {mempoolCount}</span>
@@ -354,7 +360,7 @@ export default function Home() {
           </div>
 
           {/* Price Bar (Left) */}
-          <div className="fixed left-[18px] top-1/2 -translate-y-1/2 z-[1002] bg-[#14161c]/45 border border-white/12 rounded-2xl px-3.5 py-3 backdrop-blur-lg shadow-2xl pointer-events-none min-w-[180px]">
+          <div className={`fixed left-[18px] top-1/2 -translate-y-1/2 z-[1002] bg-[#14161c]/45 border border-white/12 rounded-2xl px-3.5 py-3 backdrop-blur-lg shadow-2xl pointer-events-none min-w-[180px] transition-opacity duration-200 ${contentReady ? 'opacity-100' : 'opacity-0'}`}>
             <div className="text-[#ffd166] font-semibold">{btcPrice}</div>
             {change7d && (
               <div className={`text-sm ${change7d.positive ? 'text-[#36d399]' : 'text-[#ef4444]'}`}>
@@ -369,14 +375,14 @@ export default function Home() {
           </div>
 
           {/* Ordinals Bar (Right) */}
-          <div className="fixed right-[18px] top-1/2 -translate-y-1/2 z-[1002] bg-[#14161c]/45 border border-[#f7931a]/12 rounded-2xl px-3.5 py-3 backdrop-blur-lg shadow-2xl pointer-events-none min-w-[200px]">
+          <div className={`fixed right-[18px] top-1/2 -translate-y-1/2 z-[1002] bg-[#14161c]/45 border border-[#f7931a]/12 rounded-2xl px-3.5 py-3 backdrop-blur-lg shadow-2xl pointer-events-none min-w-[200px] transition-opacity duration-200 ${contentReady ? 'opacity-100' : 'opacity-0'}`}>
             <div className="text-[#f7931a] text-sm">Total:</div>
             <div className="text-[#ffd166] font-semibold">{latestInscription}</div>
           </div>
 
           {/* Mascot */}
           <Link href="/foxjump" target="_blank">
-            <div className="fixed top-3 right-11 z-[1003] flex items-center gap-2 cursor-pointer hover:scale-110 transition-transform">
+            <div className={`fixed top-3 right-11 z-[1003] flex items-center gap-2 cursor-pointer hover:scale-110 transition-all duration-200 ${contentReady ? 'opacity-100' : 'opacity-0'}`}>
               <div className="relative bg-white/92 text-[#0b0c10] px-2.5 py-1.5 rounded-2xl font-bold text-sm shadow-lg whitespace-nowrap">
                 up only
                 <div className="absolute right-[-8px] top-1/2 -translate-y-1/2 w-0 h-0 border-l-[8px] border-l-white/92 border-t-[8px] border-t-transparent border-b-[8px] border-b-transparent" />
