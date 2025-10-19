@@ -47,57 +47,41 @@ export default function Home() {
     if (!showGate || !gateCanvasRef.current) return;
 
     const canvas = gateCanvasRef.current;
-    const ctx = canvas.getContext('2d', { alpha: false });
+    const ctx = canvas.getContext('2d');
     if (!ctx) return;
 
-    // Set canvas size
-    const resizeCanvas = () => {
-      canvas.width = window.innerWidth;
-      canvas.height = window.innerHeight;
-    };
-    resizeCanvas();
-    window.addEventListener('resize', resizeCanvas);
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight;
 
-    const fontSize = 18;
-    const columns = Math.floor(canvas.width / fontSize);
+    const fontSize = 16;
+    const columns = canvas.width / fontSize;
     const drops: number[] = [];
     
-    // Initialize drops
-    for (let i = 0; i < columns; i++) {
-      drops[i] = 1;
+    for (let x = 0; x < columns; x++) {
+      drops[x] = 1;
     }
 
     const draw = () => {
-      // Black background with low opacity for trail effect
-      ctx.fillStyle = 'rgba(0, 0, 0, 0.05)';
+      ctx.fillStyle = 'rgba(0, 0, 0, 0.04)';
       ctx.fillRect(0, 0, canvas.width, canvas.height);
+      
+      ctx.fillStyle = '#f7931a';
+      ctx.font = fontSize + 'px monospace';
 
-      // Set text style
-      ctx.fillStyle = '#0F0'; // Classic matrix green - VERY VISIBLE!
-      ctx.font = `${fontSize}px monospace`;
-
-      // Draw characters
       for (let i = 0; i < drops.length; i++) {
         const text = Math.random() > 0.5 ? '1' : '0';
-        const x = i * fontSize;
-        const y = drops[i] * fontSize;
-
-        ctx.fillText(text, x, y);
-
-        // Reset drop randomly
-        if (y > canvas.height && Math.random() > 0.975) {
+        ctx.fillText(text, i * fontSize, drops[i] * fontSize);
+        
+        if (drops[i] * fontSize > canvas.height && Math.random() > 0.975) {
           drops[i] = 0;
         }
         drops[i]++;
       }
     };
 
-    const interval = setInterval(draw, 50);
+    const interval = setInterval(draw, 33);
     
-    return () => {
-      clearInterval(interval);
-      window.removeEventListener('resize', resizeCanvas);
-    };
+    return () => clearInterval(interval);
   }, [showGate]);
 
   // Matrix background animation for main site
@@ -355,7 +339,7 @@ export default function Home() {
       {/* Landing Overlay */}
       {showGate && (
         <div className="fixed inset-0 z-[10000] bg-black">
-          <canvas ref={gateCanvasRef} className="absolute inset-0 w-full h-full" style={{ display: 'block', backgroundColor: 'red', border: '5px solid yellow' }} />
+          <canvas ref={gateCanvasRef} className="absolute inset-0 w-full h-full" style={{ display: 'block' }} />
           <div className="absolute inset-0 flex items-center justify-center p-4" style={{ zIndex: 2 }}>
             <div className="relative max-w-[720px] w-full bg-black/90 border border-[#f7931a]/45 rounded-2xl shadow-2xl p-5 md:p-7 text-center font-mono backdrop-blur-sm">
               <div className="text-xs md:text-sm tracking-[0.2em] uppercase text-[#f7931a] mb-2">
