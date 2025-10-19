@@ -15,9 +15,9 @@ export default function PrivyProvider({ children }: { children: React.ReactNode 
           accentColor: '#f7931a',
           logo: '/osfun.png',
         },
-        loginMethods: ['twitter', 'wallet'],
+        loginMethods: ['twitter' as const, 'wallet' as const],
         embeddedWallets: {
-          createOnLogin: 'users-without-wallets',
+          createOnLogin: 'users-without-wallets' as const,
         },
       }}
       onSuccess={(user) => {
