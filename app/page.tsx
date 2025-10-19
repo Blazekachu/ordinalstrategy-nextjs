@@ -150,14 +150,11 @@ export default function Home() {
     };
   }, [showGate]);
 
-  // Scroll to bottom on load (for scroll-up effect)
+  // Scroll to bottom immediately on load (for scroll-up effect)
   useEffect(() => {
     if (!showGate && siteRef.current) {
-      setTimeout(() => {
-        if (siteRef.current) {
-          siteRef.current.scrollTop = siteRef.current.scrollHeight;
-        }
-      }, 150);
+      // Instant scroll to bottom, no animation
+      siteRef.current.scrollTop = siteRef.current.scrollHeight;
     }
   }, [showGate]);
 
