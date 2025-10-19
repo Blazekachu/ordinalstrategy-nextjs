@@ -34,20 +34,31 @@ export default function Home() {
     const now = Date.now();
     const oneHour = 60 * 60 * 1000; // 1 hour in milliseconds
 
+    console.log('Gate check:', { lastGateTime, now, diff: lastGateTime ? now - parseInt(lastGateTime) : 'none' });
+
     if (lastGateTime && (now - parseInt(lastGateTime)) < oneHour) {
       // Less than 1 hour since last gate view, skip it
+      console.log('Skipping gate - last seen less than 1 hour ago');
       setShowGate(false);
+    } else {
+      console.log('Showing gate');
+      setShowGate(true);
     }
     setIsCheckingGate(false);
   }, []);
 
   // Matrix animation for landing gate
   useEffect(() => {
+    console.log('Matrix animation useEffect called', { showGate, hasCanvas: !!gateCanvasRef.current });
     if (!showGate || !gateCanvasRef.current) return;
 
+    console.log('Starting matrix animation...');
     const canvas = gateCanvasRef.current;
     const ctx = canvas.getContext('2d');
-    if (!ctx) return;
+    if (!ctx) {
+      console.error('No canvas context!');
+      return;
+    }
 
     const dpr = window.devicePixelRatio || 1;
     canvas.width = window.innerWidth * dpr;
