@@ -47,7 +47,7 @@
   // === Lazy-loaded backgrounds (6 images) ===
   const BG_COUNT = 6;
   const bgImgs = new Array(BG_COUNT).fill(null);
-  const bgSrc  = new Array(BG_COUNT).fill(null).map((_,i)=>`./bg_${i}.png`);
+  const bgSrc  = new Array(BG_COUNT).fill(null).map((_,i)=>`/foxjump/bg_${i}.png`);
   function ensureBgLoaded(idx){
     idx = ((idx % BG_COUNT) + BG_COUNT) % BG_COUNT;
     if (bgImgs[idx]) return;
@@ -92,18 +92,18 @@
 
   // === Audio (kept) ===
   const sfx = {
-    bounce: new Audio('./bounce.wav'),
-    tramp:  new Audio('./trampoline.wav'),
-    coin:   new Audio('./coin.wav'),
-    boost:  new Audio('./boost.wav'),
-    break:  new Audio('./break.wav'),
+    bounce: new Audio('/foxjump/bounce.wav'),
+    tramp:  new Audio('/foxjump/trampoline.wav'),
+    coin:   new Audio('/foxjump/coin.wav'),
+    boost:  new Audio('/foxjump/boost.wav'),
+    break:  new Audio('/foxjump/break.wav'),
   };
   Object.values(sfx).forEach(a => a.volume = 0.75);
 
   // === Sprites ===
   const SPRITE_W = 128, SPRITE_H = 128;
   const sheet = new Image();
-  sheet.src = './fox_spritesheet.png';
+  sheet.src = '/foxjump/fox_spritesheet.png';
   let sheetReady = false;
   sheet.onload = () => sheetReady = true;
 
@@ -249,8 +249,21 @@
     // Death
     if (player.y > H + 80){
       world.gameOver = true;
-      localStorage.setItem('ordinal-fox-best', Math.max(world.best, world.score));
-      bestEl.textContent = 'Best: ' + Math.max(world.best, world.score);
+      const finalScore = Math.max(world.best, world.score);
+      localStorage.setItem('ordinal-fox-best', finalScore);
+      bestEl.textContent = 'Best: ' + finalScore;
+      
+      // Send score to parent window for Next.js integration
+      if (window.parent !== window) {
+        window.parent.postMessage({
+          type: 'GAME_SCORE',
+          score: world.score,
+          level: Math.floor(world.score / 1000),
+          coins: coins.filter(c => c.taken).length,
+          playTime: Math.floor(Date.now() / 1000)
+        }, '*');
+      }
+      
       setTimeout(reset, 800);
     }
 
