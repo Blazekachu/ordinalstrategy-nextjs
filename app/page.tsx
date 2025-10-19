@@ -50,38 +50,39 @@ export default function Home() {
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
 
-    canvas.width = window.innerWidth;
-    canvas.height = window.innerHeight;
+    const dpr = window.devicePixelRatio || 1;
+    canvas.width = window.innerWidth * dpr;
+    canvas.height = window.innerHeight * dpr;
+    canvas.style.width = window.innerWidth + 'px';
+    canvas.style.height = window.innerHeight + 'px';
+    ctx.scale(dpr, dpr);
 
-    const fontSize = 16;
-    const columns = canvas.width / fontSize;
-    const drops: number[] = [];
-    
-    for (let x = 0; x < columns; x++) {
-      drops[x] = 1;
-    }
+    const fontSize = 14;
+    const cols = Math.floor(window.innerWidth / fontSize);
+    const drops = new Array(cols).fill(0);
+    ctx.font = `${fontSize}px monospace`;
 
-    const draw = () => {
-      ctx.fillStyle = 'rgba(0, 0, 0, 0.04)';
-      ctx.fillRect(0, 0, canvas.width, canvas.height);
-      
-      ctx.fillStyle = '#f7931a';
-      ctx.font = fontSize + 'px monospace';
+    let animationId: number;
+    const drawMatrix = () => {
+      ctx.fillStyle = 'rgba(0, 0, 0, 0.12)';
+      ctx.fillRect(0, 0, window.innerWidth, window.innerHeight);
 
-      for (let i = 0; i < drops.length; i++) {
-        const text = Math.random() > 0.5 ? '1' : '0';
-        ctx.fillText(text, i * fontSize, drops[i] * fontSize);
-        
-        if (drops[i] * fontSize > canvas.height && Math.random() > 0.975) {
-          drops[i] = 0;
-        }
-        drops[i]++;
+      for (let i = 0; i < cols; i++) {
+        const char = Math.random() < 0.5 ? '0' : '1';
+        const x = i * fontSize;
+        const y = drops[i] * fontSize;
+        const highlight = Math.random() < 0.06;
+        ctx.fillStyle = highlight ? '#ffffff' : '#f7931a';
+        ctx.fillText(char, x, y);
+
+        if (y > window.innerHeight && Math.random() > 0.975) drops[i] = 0;
+        else drops[i]++;
       }
+      animationId = requestAnimationFrame(drawMatrix);
     };
 
-    const interval = setInterval(draw, 33);
-    
-    return () => clearInterval(interval);
+    drawMatrix();
+    return () => cancelAnimationFrame(animationId);
   }, [showGate]);
 
   // Matrix background animation for main site
