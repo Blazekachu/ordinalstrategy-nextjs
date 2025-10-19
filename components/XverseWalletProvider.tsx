@@ -123,7 +123,7 @@ export function XverseWalletProvider({ children }: { children: ReactNode }) {
     
     try {
       const response = await request('getAccounts', {
-        purposes: [AddressPurpose.Ordinals, AddressPurpose.Payment, AddressPurpose.Stacks],
+        purposes: [AddressPurpose.Ordinals, AddressPurpose.Payment],
         message: 'Connect to Ordinal Strategy',
       });
 
@@ -134,13 +134,14 @@ export function XverseWalletProvider({ children }: { children: ReactNode }) {
         const paymentAccount = response.result.find(
           (account: any) => account.purpose === AddressPurpose.Payment
         );
-        const stacksAccount = response.result.find(
-          (account: any) => account.purpose === AddressPurpose.Stacks
-        );
 
         const ordinalsAddress = ordinalsAccount?.address || null;
         const paymentAddress = paymentAccount?.address || null;
-        const sparkAddress = stacksAccount?.address || null;
+        
+        // TODO: Spark integration pending - need to determine correct API method
+        // Spark is different from Stacks - it's a Bitcoin L2 protocol
+        // Documentation: https://docs.spark.money/wallet/introduction
+        const sparkAddress = null;
 
         // Save to localStorage
         if (paymentAddress) localStorage.setItem('xverse_address', paymentAddress);
