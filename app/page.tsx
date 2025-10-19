@@ -540,10 +540,7 @@ export default function Home() {
                     textColor="#0b0c10"
                     accentColor="#ffffff"
                   />
-                  <a href="#about" className="bg-transparent border-2 border-[#f7931a] text-[#f7931a] px-5 md:px-7 py-2.5 md:py-3 rounded-full font-bold hover:bg-[#f7931a] hover:text-[#0b0c10] transition-all text-sm md:text-base">
-                    Learn More
-          </a>
-        </div>
+                </div>
               </div>
             </section>
           </div>

@@ -12,10 +12,12 @@ interface WalletState {
   connected: boolean;
   address: string | null;
   ordinalsAddress: string | null;
+  sparkAddress: string | null;
   balance: number | null;
   nativeSegwit: AddressInfo | null;
   nestedSegwit: AddressInfo | null;
   taproot: AddressInfo | null;
+  spark: AddressInfo | null;
   loading: boolean;
 }
 
@@ -32,10 +34,12 @@ export function XverseWalletProvider({ children }: { children: ReactNode }) {
     connected: false,
     address: null,
     ordinalsAddress: null,
+    sparkAddress: null,
     balance: null,
     nativeSegwit: null,
     nestedSegwit: null,
     taproot: null,
+    spark: null,
     loading: true, // Start as loading to check localStorage
   });
 
@@ -43,18 +47,22 @@ export function XverseWalletProvider({ children }: { children: ReactNode }) {
     // Check if wallet was previously connected
     const savedAddress = localStorage.getItem('xverse_address');
     const savedOrdinalsAddress = localStorage.getItem('xverse_ordinals_address');
+    const savedSparkAddress = localStorage.getItem('xverse_spark_address');
     
     if (savedAddress && savedOrdinalsAddress) {
       const initBalance = async () => {
         const balance = await fetchBalance(savedAddress);
+        const sparkBalance = savedSparkAddress ? await fetchBalance(savedSparkAddress) : null;
         setWalletState(prev => ({
           ...prev,
           connected: true,
           address: savedAddress,
           ordinalsAddress: savedOrdinalsAddress,
+          sparkAddress: savedSparkAddress,
           balance,
           nativeSegwit: { address: savedAddress, balance },
           taproot: { address: savedOrdinalsAddress, balance: null },
+          spark: savedSparkAddress ? { address: savedSparkAddress, balance: sparkBalance } : null,
           loading: false,
         }));
       };
@@ -101,6 +109,13 @@ export function XverseWalletProvider({ children }: { children: ReactNode }) {
         taproot: prev.taproot ? { ...prev.taproot, balance } : null,
       }));
     }
+    if (walletState.spark?.address) {
+      const balance = await fetchBalance(walletState.spark.address);
+      setWalletState(prev => ({
+        ...prev,
+        spark: prev.spark ? { ...prev.spark, balance } : null,
+      }));
+    }
   };
 
   const connect = async () => {
@@ -108,7 +123,7 @@ export function XverseWalletProvider({ children }: { children: ReactNode }) {
     
     try {
       const response = await request('getAccounts', {
-        purposes: [AddressPurpose.Ordinals, AddressPurpose.Payment],
+        purposes: [AddressPurpose.Ordinals, AddressPurpose.Payment, AddressPurpose.Stacks],
         message: 'Connect to Ordinal Strategy',
       });
 
@@ -119,26 +134,34 @@ export function XverseWalletProvider({ children }: { children: ReactNode }) {
         const paymentAccount = response.result.find(
           (account: any) => account.purpose === AddressPurpose.Payment
         );
+        const stacksAccount = response.result.find(
+          (account: any) => account.purpose === AddressPurpose.Stacks
+        );
 
         const ordinalsAddress = ordinalsAccount?.address || null;
         const paymentAddress = paymentAccount?.address || null;
+        const sparkAddress = stacksAccount?.address || null;
 
         // Save to localStorage
         if (paymentAddress) localStorage.setItem('xverse_address', paymentAddress);
         if (ordinalsAddress) localStorage.setItem('xverse_ordinals_address', ordinalsAddress);
+        if (sparkAddress) localStorage.setItem('xverse_spark_address', sparkAddress);
 
         // Fetch balances for all addresses
         const paymentBalance = paymentAddress ? await fetchBalance(paymentAddress) : null;
         const ordinalsBalance = ordinalsAddress ? await fetchBalance(ordinalsAddress) : null;
+        const sparkBalance = sparkAddress ? await fetchBalance(sparkAddress) : null;
 
         setWalletState({
           connected: true,
           address: paymentAddress,
           ordinalsAddress: ordinalsAddress,
+          sparkAddress: sparkAddress,
           balance: paymentBalance,
           nativeSegwit: paymentAddress ? { address: paymentAddress, balance: paymentBalance } : null,
           nestedSegwit: null, // Xverse primarily uses native segwit
           taproot: ordinalsAddress ? { address: ordinalsAddress, balance: ordinalsBalance } : null,
+          spark: sparkAddress ? { address: sparkAddress, balance: sparkBalance } : null,
           loading: false,
         });
       } else {
@@ -154,14 +177,17 @@ export function XverseWalletProvider({ children }: { children: ReactNode }) {
   const disconnect = () => {
     localStorage.removeItem('xverse_address');
     localStorage.removeItem('xverse_ordinals_address');
+    localStorage.removeItem('xverse_spark_address');
     setWalletState({
       connected: false,
       address: null,
       ordinalsAddress: null,
+      sparkAddress: null,
       balance: null,
       nativeSegwit: null,
       nestedSegwit: null,
       taproot: null,
+      spark: null,
       loading: false,
     });
   };

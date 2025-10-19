@@ -28,10 +28,12 @@ export default function ProfilePage() {
     connected, 
     address, 
     ordinalsAddress, 
+    sparkAddress,
     balance, 
     nativeSegwit,
     nestedSegwit,
     taproot,
+    spark,
     disconnect,
     refreshBalances,
     loading: walletLoading 
@@ -349,6 +351,29 @@ export default function ProfilePage() {
                       <div className="text-right">
                         <div className="text-3xl font-bold text-[#ffd166]">
                           {taproot.balance !== null ? taproot.balance.toFixed(8) : '...'}
+                        </div>
+                        <div className="text-sm text-gray-400">BTC</div>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* Spark (Stacks) */}
+                {spark && (
+                  <div className="group bg-gradient-to-br from-[#111317]/90 to-[#1b1c1f]/90 backdrop-blur-sm p-6 rounded-2xl border-2 border-purple-500/20 hover:border-purple-500/60 hover:shadow-[0_10px_40px_rgba(168,85,247,0.2)] transition-all duration-300">
+                    <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+                      <div className="flex-1">
+                        <div className="text-purple-400 text-sm mb-2 uppercase tracking-wider font-semibold flex items-center gap-2">
+                          <span className="text-2xl">⚡</span>
+                          Spark / Stacks (SP...)
+                        </div>
+                        <div className="text-white font-mono text-sm break-all bg-black/40 p-3 rounded-lg">
+                          {spark.address}
+                        </div>
+                      </div>
+                      <div className="text-right">
+                        <div className="text-3xl font-bold text-purple-300">
+                          {spark.balance !== null ? spark.balance.toFixed(8) : '...'}
                         </div>
                         <div className="text-sm text-gray-400">BTC</div>
                       </div>
