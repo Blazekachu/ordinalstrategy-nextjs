@@ -361,20 +361,21 @@ export default function Home() {
           <canvas ref={gateCanvasRef} className="absolute inset-0 w-full h-full" style={{ display: 'block', opacity: 1, zIndex: 1 }} />
           <div className="absolute inset-0 flex items-center justify-center p-4" style={{ zIndex: 2 }}>
             <div className="relative max-w-[720px] w-full bg-black/90 border border-[#f7931a]/45 rounded-2xl shadow-2xl p-5 md:p-7 text-center font-mono backdrop-blur-sm">
-            <div className="text-xs md:text-sm tracking-[0.2em] uppercase text-[#f7931a] mb-2">
-              Bitcoin Genesis — 03 Jan 2009
-            </div>
-            <div className="text-lg md:text-[1.4rem] leading-relaxed mb-5 text-shadow-[0_0_6px_rgba(247,147,26,0.35)]">
-              "The Times 03/Jan/2009 Chancellor on brink of second bailout for banks"
-            </div>
-            <div className="flex justify-center">
-              <ScrollButton
-                text="Commit Changes"
-                onComplete={handleGateClick}
-                backgroundColor="#f7931a"
-                textColor="#0b0c10"
-                accentColor="#ffffff"
-              />
+              <div className="text-xs md:text-sm tracking-[0.2em] uppercase text-[#f7931a] mb-2">
+                Bitcoin Genesis — 03 Jan 2009
+              </div>
+              <div className="text-lg md:text-[1.4rem] leading-relaxed mb-5 text-shadow-[0_0_6px_rgba(247,147,26,0.35)]">
+                "The Times 03/Jan/2009 Chancellor on brink of second bailout for banks"
+              </div>
+              <div className="flex justify-center">
+                <ScrollButton
+                  text="Commit Changes"
+                  onComplete={handleGateClick}
+                  backgroundColor="#f7931a"
+                  textColor="#0b0c10"
+                  accentColor="#ffffff"
+                />
+              </div>
             </div>
           </div>
         </div>
