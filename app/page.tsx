@@ -144,7 +144,14 @@ export default function Home() {
 
     siteRef.current.addEventListener('scroll', updateRocket);
     window.addEventListener('resize', updateRocket);
-    updateRocket();
+    
+    // Initial update with slight delay to ensure DOM is ready
+    const initialUpdate = () => {
+      updateRocket();
+      // Update again after a short delay to catch any layout shifts
+      setTimeout(updateRocket, 100);
+    };
+    initialUpdate();
 
     return () => {
       if (siteRef.current) {
@@ -152,7 +159,7 @@ export default function Home() {
       }
       window.removeEventListener('resize', updateRocket);
     };
-  }, [showGate]);
+  }, [showGate, contentReady]);
 
   // Handle content visibility when gate closes
   useEffect(() => {
@@ -163,9 +170,15 @@ export default function Home() {
       // Set scroll position to bottom immediately
       siteRef.current.scrollTop = siteRef.current.scrollHeight;
       
-      // Show content after a brief delay to ensure scroll is set
+      // Show content and trigger rocket update after scroll is set
       const timer = setTimeout(() => {
         setContentReady(true);
+        // Trigger another update after content is visible
+        requestAnimationFrame(() => {
+          if (siteRef.current) {
+            siteRef.current.dispatchEvent(new Event('scroll'));
+          }
+        });
       }, 100);
       
       return () => clearTimeout(timer);
@@ -179,6 +192,10 @@ export default function Home() {
       // If user already passed gate (returning user), set scroll immediately
       if (!showGate) {
         node.scrollTop = node.scrollHeight;
+        // Trigger scroll event to update rocket/bar position
+        requestAnimationFrame(() => {
+          node.dispatchEvent(new Event('scroll'));
+        });
       }
     }
   };
