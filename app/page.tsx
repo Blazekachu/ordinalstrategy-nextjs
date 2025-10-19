@@ -237,14 +237,16 @@ export default function Home() {
       })
       .catch(console.error);
 
-    // Fetch mempool data
+    // Fetch mempool data and fees
     Promise.all([
       fetch('https://mempool.space/api/blocks').then(r => r.json()),
       fetch('https://mempool.space/api/mempool').then(r => r.json()),
+      fetch('https://mempool.space/api/v1/fees/recommended').then(r => r.json()),
     ])
-      .then(([blocks, mempool]) => {
+      .then(([blocks, mempool, fees]) => {
         if (blocks?.[0]?.height) setBlockHeight(blocks[0].height);
         if (mempool?.count) setMempoolCount(mempool.count.toLocaleString());
+        if (fees?.fastestFee) setAvgFee(fees.fastestFee.toString());
       })
       .catch(console.error);
 
@@ -293,7 +295,7 @@ export default function Home() {
               onClick={handleGateClick}
               className="bg-[#f7931a] text-[#0b0c10] px-6 py-2.5 rounded-full font-bold shadow-lg hover:brightness-110 hover:scale-105 active:scale-95 transition-all"
             >
-              TRUE
+              COMMIT CHANGES
             </button>
           </div>
         </div>
@@ -430,7 +432,7 @@ export default function Home() {
                 onClick={handleCountMeIn}
                 className="bg-[#f7931a] text-[#0b0c10] px-8 py-3 rounded-full font-bold hover:bg-white hover:text-black hover:scale-105 transition-all shadow-lg"
               >
-                count me in
+                Join
               </button>
             </section>
 
