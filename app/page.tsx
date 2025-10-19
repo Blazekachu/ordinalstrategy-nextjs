@@ -253,17 +253,25 @@ export default function Home() {
       })
       .catch(console.error);
 
-    // Fetch ordinals data
-    fetch('https://api.ordiscan.com/v1/inscriptions?limit=1', {
-      headers: { Authorization: 'Bearer ***REMOVED***' },
-    })
+    // Fetch ordinals data from ordinals.com API
+    fetch('https://ordinals.com/api/inscriptions')
       .then(res => res.json())
       .then(data => {
-        if (data.data?.[0]?.inscription_number) {
-          setLatestInscription(data.data[0].inscription_number.toLocaleString());
+        if (data?.inscriptions?.[0]?.number !== undefined) {
+          setLatestInscription(data.inscriptions[0].number.toLocaleString());
         }
       })
-      .catch(console.error);
+      .catch(() => {
+        // Fallback to another API if first one fails
+        fetch('https://api.hiro.so/ordinals/v1/inscriptions?limit=1')
+          .then(res => res.json())
+          .then(data => {
+            if (data?.results?.[0]?.number !== undefined) {
+              setLatestInscription(data.results[0].number.toLocaleString());
+            }
+          })
+          .catch(console.error);
+      });
   }, [showGate]);
 
   const handleGateClick = () => {
@@ -285,13 +293,13 @@ export default function Home() {
     <div className="min-h-screen bg-[#0b0c10] text-white relative">
       {/* Landing Overlay */}
       {showGate && (
-        <div className="fixed inset-0 z-[10000] flex items-center justify-center bg-black/35 backdrop-blur-lg">
+        <div className="fixed inset-0 z-[10000] flex items-center justify-center bg-black/35 backdrop-blur-lg p-4">
           <canvas ref={gateCanvasRef} className="absolute inset-0 w-full h-full" />
-          <div className="relative z-[10001] max-w-[720px] mx-5 bg-black/35 border border-[#f7931a]/45 rounded-2xl shadow-2xl p-7 text-center font-mono">
-            <div className="text-sm tracking-[0.2em] uppercase text-[#f7931a] mb-2">
+          <div className="relative z-[10001] max-w-[720px] w-full bg-black/35 border border-[#f7931a]/45 rounded-2xl shadow-2xl p-5 md:p-7 text-center font-mono">
+            <div className="text-xs md:text-sm tracking-[0.2em] uppercase text-[#f7931a] mb-2">
               Bitcoin Genesis — 03 Jan 2009
             </div>
-            <div className="text-[1.4rem] leading-relaxed mb-5 text-shadow-[0_0_6px_rgba(247,147,26,0.35)]">
+            <div className="text-lg md:text-[1.4rem] leading-relaxed mb-5 text-shadow-[0_0_6px_rgba(247,147,26,0.35)]">
               "The Times 03/Jan/2009 Chancellor on brink of second bailout for banks"
             </div>
             <div className="flex justify-center">
@@ -315,23 +323,23 @@ export default function Home() {
 
           {/* Count Me In Modal */}
           {showCountMeIn && (
-            <div className="fixed inset-0 z-[10001] flex items-center justify-center bg-black/35 backdrop-blur-lg">
-              <div className="relative max-w-[600px] mx-5 bg-black/35 border border-[#f7931a]/45 rounded-2xl shadow-2xl p-8 text-center font-mono">
+            <div className="fixed inset-0 z-[10001] flex items-center justify-center bg-black/35 backdrop-blur-lg p-4">
+              <div className="relative max-w-[600px] w-full bg-black/35 border border-[#f7931a]/45 rounded-2xl shadow-2xl p-6 md:p-8 text-center font-mono">
                 <button
                   onClick={() => setShowCountMeIn(false)}
-                  className="absolute top-4 right-4 text-2xl text-gray-400 hover:text-[#f7931a]"
+                  className="absolute top-3 right-3 md:top-4 md:right-4 text-2xl text-gray-400 hover:text-[#f7931a]"
                 >
                   &times;
                 </button>
-                <div className="text-xl tracking-[0.2em] uppercase text-[#f7931a] mb-3">
+                <div className="text-lg md:text-xl tracking-[0.2em] uppercase text-[#f7931a] mb-3">
                   Join Ordinal Strategy
                 </div>
-                <div className="text-base text-gray-300 mb-6">
+                <div className="text-sm md:text-base text-gray-300 mb-6">
                   Connect to verify your identity and join our community
                 </div>
                 <button
                   onClick={handleTwitterConnect}
-                  className="bg-[#1da1f2] text-white px-6 py-3 rounded-lg font-semibold hover:bg-[#0d8bd9] hover:-translate-y-0.5 transition-all inline-flex items-center gap-2"
+                  className="bg-[#1da1f2] text-white px-5 md:px-6 py-2.5 md:py-3 rounded-lg font-semibold hover:bg-[#0d8bd9] hover:-translate-y-0.5 transition-all inline-flex items-center gap-2 text-sm md:text-base"
                 >
                   🔐 Connect Account
                 </button>
@@ -366,16 +374,16 @@ export default function Home() {
           </div>
 
           {/* Mempool Bar */}
-          <div className={`fixed left-0 right-0 bottom-[72px] z-[1001] bg-[#0f1116] backdrop-blur border-t border-white/10 border-b border-white/6 px-[10%] py-0.5 transition-opacity duration-200 ${contentReady ? 'opacity-100' : 'opacity-0'}`}>
-            <div className="flex flex-wrap justify-center gap-3 text-[#f7931a] font-semibold text-sm">
+          <div className={`fixed left-0 right-0 bottom-[72px] z-[1001] bg-[#0f1116] backdrop-blur border-t border-white/10 border-b border-white/6 px-4 md:px-[10%] py-0.5 transition-opacity duration-200 ${contentReady ? 'opacity-100' : 'opacity-0'}`}>
+            <div className="flex flex-wrap justify-center gap-2 md:gap-3 text-[#f7931a] font-semibold text-xs md:text-sm">
               <span>🟠 Block: {blockHeight}</span>
               <span>Txns: {mempoolCount}</span>
-              <span>Avg Fee: {avgFee} sats/vB</span>
+              <span>Fee: {avgFee} sat/vB</span>
             </div>
           </div>
 
-          {/* Price Bar (Left) */}
-          <div className={`fixed left-[18px] top-1/2 -translate-y-1/2 z-[1002] bg-[#14161c]/45 border border-white/12 rounded-2xl px-3.5 py-3 backdrop-blur-lg shadow-2xl pointer-events-none min-w-[180px] transition-opacity duration-200 ${contentReady ? 'opacity-100' : 'opacity-0'}`}>
+          {/* Price Bar (Left) - Hidden on mobile */}
+          <div className={`hidden md:block fixed left-[18px] top-1/2 -translate-y-1/2 z-[1002] bg-[#14161c]/45 border border-white/12 rounded-2xl px-3.5 py-3 backdrop-blur-lg shadow-2xl pointer-events-none min-w-[180px] transition-opacity duration-200 ${contentReady ? 'opacity-100' : 'opacity-0'}`}>
             <div className="text-[#ffd166] font-semibold">{btcPrice}</div>
             {change7d && (
               <div className={`text-sm ${change7d.positive ? 'text-[#36d399]' : 'text-[#ef4444]'}`}>
@@ -389,32 +397,33 @@ export default function Home() {
             )}
           </div>
 
-          {/* Ordinals Bar (Right) */}
-          <div className={`fixed right-[18px] top-1/2 -translate-y-1/2 z-[1002] bg-[#14161c]/45 border border-[#f7931a]/12 rounded-2xl px-3.5 py-3 backdrop-blur-lg shadow-2xl pointer-events-none min-w-[200px] transition-opacity duration-200 ${contentReady ? 'opacity-100' : 'opacity-0'}`}>
-            <div className="text-[#f7931a] text-sm">Total:</div>
+          {/* Ordinals Bar (Right) - Hidden on mobile */}
+          <div className={`hidden md:block fixed right-[18px] top-1/2 -translate-y-1/2 z-[1002] bg-[#14161c]/45 border border-[#f7931a]/12 rounded-2xl px-3.5 py-3 backdrop-blur-lg shadow-2xl pointer-events-none min-w-[200px] transition-opacity duration-200 ${contentReady ? 'opacity-100' : 'opacity-0'}`}>
+            <div className="text-[#f7931a] text-sm">Inscriptions:</div>
             <div className="text-[#ffd166] font-semibold">{latestInscription}</div>
           </div>
 
           {/* Mascot */}
           <Link href="/foxjump" target="_blank">
-            <div className={`fixed top-3 right-11 z-[1003] flex items-center gap-2 cursor-pointer hover:scale-110 transition-all duration-200 ${contentReady ? 'opacity-100' : 'opacity-0'}`}>
-              <div className="relative bg-white/92 text-[#0b0c10] px-2.5 py-1.5 rounded-2xl font-bold text-sm shadow-lg whitespace-nowrap">
+            <div className={`fixed top-3 right-3 md:right-11 z-[1003] flex items-center gap-1 md:gap-2 cursor-pointer hover:scale-110 transition-all duration-200 ${contentReady ? 'opacity-100' : 'opacity-0'}`}>
+              <div className="relative bg-white/92 text-[#0b0c10] px-2 md:px-2.5 py-1 md:py-1.5 rounded-2xl font-bold text-xs md:text-sm shadow-lg whitespace-nowrap">
                 up only
-                <div className="absolute right-[-8px] top-1/2 -translate-y-1/2 w-0 h-0 border-l-[8px] border-l-white/92 border-t-[8px] border-t-transparent border-b-[8px] border-b-transparent" />
+                <div className="absolute right-[-6px] md:right-[-8px] top-1/2 -translate-y-1/2 w-0 h-0 border-l-[6px] md:border-l-[8px] border-l-white/92 border-t-[6px] md:border-t-[8px] border-t-transparent border-b-[6px] md:border-b-[8px] border-b-transparent" />
               </div>
-              <img src="/osmascot.png" alt="OS Mascot" className="w-14 h-14 object-contain drop-shadow-lg rounded-lg" />
+              <img src="/osmascot.png" alt="OS Mascot" className="w-10 h-10 md:w-14 md:h-14 object-contain drop-shadow-lg rounded-lg" />
             </div>
           </Link>
 
           {/* Header */}
-          <header className="fixed bottom-0 left-0 right-0 z-[1000] bg-black/85 backdrop-blur-lg shadow-[0_-10px_30px_rgba(0,0,0,0.5)] h-[72px] flex items-center justify-between px-[10%]">
+          <header className="fixed bottom-0 left-0 right-0 z-[1000] bg-black/85 backdrop-blur-lg shadow-[0_-10px_30px_rgba(0,0,0,0.5)] h-[72px] flex items-center justify-between px-4 md:px-[10%]">
             <div className="logo">
-              <img src="/osfun.png" alt="Ordinal Strategy Logo" className="h-[42px] w-auto object-contain hover:scale-105 transition-transform" />
+              <img src="/osfun.png" alt="Ordinal Strategy Logo" className="h-[32px] md:h-[42px] w-auto object-contain hover:scale-105 transition-transform" />
             </div>
-            <nav className="flex gap-2.5">
-              <a href="#about" className="text-[#f7931a] font-medium hover:text-white transition-colors">About</a>
-              <a href="#mechanics" className="text-[#f7931a] font-medium hover:text-white transition-colors">How It Works</a>
-              <a href="#community" className="text-[#f7931a] font-medium hover:text-white transition-colors">Community</a>
+            <nav className="flex gap-2 md:gap-2.5">
+              <a href="#about" className="text-[#f7931a] font-medium hover:text-white transition-colors text-xs md:text-base">About</a>
+              <a href="#mechanics" className="text-[#f7931a] font-medium hover:text-white transition-colors text-xs md:text-base hidden sm:inline">How It Works</a>
+              <a href="#mechanics" className="text-[#f7931a] font-medium hover:text-white transition-colors text-xs md:text-base sm:hidden">How</a>
+              <a href="#community" className="text-[#f7931a] font-medium hover:text-white transition-colors text-xs md:text-base">Community</a>
             </nav>
           </header>
 
@@ -429,9 +438,9 @@ export default function Home() {
             </footer>
 
             {/* Community Section */}
-            <section id="community" className="min-h-screen flex flex-col justify-center items-center px-[10%] py-24 snap-start">
-              <h3 className="text-4xl text-[#f7931a] mb-6 text-center">Join the Movement</h3>
-              <p className="text-center max-w-3xl mb-8 text-lg">
+            <section id="community" className="min-h-screen flex flex-col justify-center items-center px-6 md:px-[10%] py-24 snap-start">
+              <h3 className="text-3xl md:text-4xl text-[#f7931a] mb-6 text-center">Join the Movement</h3>
+              <p className="text-center max-w-3xl mb-8 text-base md:text-lg px-4">
                 Ordinals are the art of precision join us in mastering the strategy.
               </p>
               <ScrollButton
@@ -444,38 +453,38 @@ export default function Home() {
             </section>
 
             {/* Mechanics Section */}
-            <section id="mechanics" className="min-h-screen flex flex-col justify-center items-center px-[10%] py-24 snap-start">
-              <h3 className="text-4xl text-[#f7931a] mb-12 text-center">How It Works</h3>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8 w-full max-w-6xl">
+            <section id="mechanics" className="min-h-screen flex flex-col justify-center items-center px-6 md:px-[10%] py-24 snap-start">
+              <h3 className="text-3xl md:text-4xl text-[#f7931a] mb-12 text-center">How It Works</h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 md:gap-8 w-full max-w-6xl">
                 {[
                   { icon: '🔍', title: 'Track', text: 'Monitor Ordinal activity across blocks with precision.' },
                   { icon: '⚙️', title: 'Analyze', text: 'Study rarity, metadata, and market behavior in real time.' },
                   { icon: '🧾', title: 'Curate', text: 'Organize collections and optimize your strategy portfolio.' },
                   { icon: '🔗', title: 'Share', text: 'Collaborate and share your research across the ecosystem.' },
                 ].map((item, i) => (
-                  <div key={i} className="bg-[#111317] p-8 rounded-2xl text-center hover:bg-[#1d1f25] transition-colors">
-                    <h4 className="text-3xl mb-3">{item.icon} {item.title}</h4>
-                    <p className="text-gray-300">{item.text}</p>
+                  <div key={i} className="bg-[#111317] p-6 md:p-8 rounded-2xl text-center hover:bg-[#1d1f25] transition-colors">
+                    <h4 className="text-2xl md:text-3xl mb-3">{item.icon} {item.title}</h4>
+                    <p className="text-gray-300 text-sm md:text-base">{item.text}</p>
                   </div>
                 ))}
               </div>
             </section>
 
             {/* About Section */}
-            <section id="about" className="min-h-screen flex flex-col justify-center items-center px-[10%] py-24 snap-start">
-              <h3 className="text-4xl text-[#f7931a] mb-6 text-center">Why Ordinal Strategy?</h3>
-              <p className="text-center max-w-3xl text-lg">
+            <section id="about" className="min-h-screen flex flex-col justify-center items-center px-6 md:px-[10%] py-24 snap-start">
+              <h3 className="text-3xl md:text-4xl text-[#f7931a] mb-6 text-center">Why Ordinal Strategy?</h3>
+              <p className="text-center max-w-3xl text-base md:text-lg px-4">
                 We blend research, on-chain tools, and market data to empower collectors and creators. With precise insights and curated analytics, we help decode the Bitcoin Ordinals ecosystem for strategic advantage.
               </p>
             </section>
 
             {/* Hero Section - Last in DOM for scroll-up effect */}
-            <section id="hero" className="min-h-screen flex flex-col justify-center items-center text-center px-[10%] bg-gradient-radial from-[#1b1c1f] to-[#0b0c10] snap-start">
-              <div className="bg-white/5 backdrop-blur-md border border-white/10 rounded-3xl p-12 max-w-3xl">
-                <h2 className="text-5xl font-bold text-[#f7931a] mb-4">
+            <section id="hero" className="min-h-screen flex flex-col justify-center items-center text-center px-4 md:px-[10%] bg-gradient-radial from-[#1b1c1f] to-[#0b0c10] snap-start">
+              <div className="bg-white/5 backdrop-blur-md border border-white/10 rounded-3xl p-6 md:p-12 max-w-3xl">
+                <h2 className="text-3xl md:text-5xl font-bold text-[#f7931a] mb-4">
                   Precision in the World of Bitcoin Ordinals
                 </h2>
-                <p className="text-xl mb-6 max-w-2xl">
+                <p className="text-base md:text-xl mb-6 max-w-2xl">
                   Ordinal Strategy is a framework for research, tracking, and optimization across Bitcoin Ordinals, built for collectors, creators, and strategists.
                 </p>
                 <div className="flex gap-4 justify-center flex-wrap items-center">
@@ -486,7 +495,7 @@ export default function Home() {
                     textColor="#0b0c10"
                     accentColor="#ffffff"
                   />
-                  <a href="#about" className="bg-transparent border-2 border-[#f7931a] text-[#f7931a] px-7 py-3 rounded-full font-bold hover:bg-[#f7931a] hover:text-[#0b0c10] transition-all">
+                  <a href="#about" className="bg-transparent border-2 border-[#f7931a] text-[#f7931a] px-5 md:px-7 py-2.5 md:py-3 rounded-full font-bold hover:bg-[#f7931a] hover:text-[#0b0c10] transition-all text-sm md:text-base">
                     Learn More
           </a>
         </div>

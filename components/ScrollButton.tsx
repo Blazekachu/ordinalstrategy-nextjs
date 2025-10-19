@@ -94,7 +94,7 @@ export default function ScrollButton({
           transition: 'color 0.2s',
         }}
       >
-        {`→ ${text.toUpperCase()}`}
+        {text.toUpperCase()}
       </div>
 
       {/* Draggable Handle */}
