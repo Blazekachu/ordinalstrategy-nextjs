@@ -338,8 +338,9 @@ export default function Home() {
     <div className="min-h-screen bg-[#0b0c10] text-white relative">
       {/* Landing Overlay */}
       {showGate && (
-        <div className="fixed inset-0 z-[10000] flex items-center justify-center bg-black/35 backdrop-blur-lg p-4">
-          <canvas ref={gateCanvasRef} className="absolute inset-0 w-full h-full" />
+        <div className="fixed inset-0 z-[10000] flex items-center justify-center p-4">
+          <canvas ref={gateCanvasRef} className="absolute inset-0 w-full h-full z-0" />
+          <div className="absolute inset-0 bg-black/35 backdrop-blur-sm z-[1]" />
           <div className="relative z-[10001] max-w-[720px] w-full bg-black/35 border border-[#f7931a]/45 rounded-2xl shadow-2xl p-5 md:p-7 text-center font-mono">
             <div className="text-xs md:text-sm tracking-[0.2em] uppercase text-[#f7931a] mb-2">
               Bitcoin Genesis — 03 Jan 2009
