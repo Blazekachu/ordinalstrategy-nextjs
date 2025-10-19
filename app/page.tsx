@@ -71,27 +71,34 @@ export default function Home() {
     ctx.fillStyle = '#000000';
     ctx.fillRect(0, 0, window.innerWidth, window.innerHeight);
 
-    const fontSize = 16;
+    const fontSize = 20;
     const cols = Math.floor(window.innerWidth / fontSize);
     const drops = new Array(cols).fill(1).map(() => Math.random() * -100);
-    ctx.font = `bold ${fontSize}px monospace`;
+    ctx.font = `bold ${fontSize}px "Courier New", monospace`;
 
     let animationId: number;
     const drawMatrix = () => {
-      // Semi-transparent black to create fade effect
-      ctx.fillStyle = 'rgba(0, 0, 0, 0.05)';
+      // Very light fade so text stays visible longer
+      ctx.fillStyle = 'rgba(0, 0, 0, 0.03)';
       ctx.fillRect(0, 0, window.innerWidth, window.innerHeight);
 
+      ctx.shadowBlur = 15;
+      
       for (let i = 0; i < cols; i++) {
         const char = Math.random() < 0.5 ? '0' : '1';
         const x = i * fontSize;
         const y = drops[i] * fontSize;
         
-        // Add random highlights for shimmer effect
-        const highlight = Math.random() < 0.03;
-        ctx.fillStyle = highlight ? '#ffffff' : '#f7931a';
-        ctx.shadowColor = highlight ? '#ffffff' : '#f7931a';
-        ctx.shadowBlur = highlight ? 10 : 5;
+        // More highlights for better visibility
+        const highlight = Math.random() < 0.1;
+        
+        if (highlight) {
+          ctx.fillStyle = '#ffffff';
+          ctx.shadowColor = '#ffffff';
+        } else {
+          ctx.fillStyle = '#f7931a';
+          ctx.shadowColor = '#f7931a';
+        }
         
         ctx.fillText(char, x, y);
 
