@@ -14,6 +14,7 @@ export default function Home() {
   const [latestInscription, setLatestInscription] = useState('--');
   const [showGate, setShowGate] = useState(true);
   const [showCountMeIn, setShowCountMeIn] = useState(false);
+  const [contentReady, setContentReady] = useState(false);
   const gateCanvasRef = useRef<HTMLCanvasElement>(null);
   const bgCanvasRef = useRef<HTMLCanvasElement>(null);
   const siteRef = useRef<HTMLDivElement>(null);
@@ -153,8 +154,17 @@ export default function Home() {
   // Scroll to bottom immediately on load (for scroll-up effect)
   useEffect(() => {
     if (!showGate && siteRef.current) {
-      // Instant scroll to bottom, no animation
-      siteRef.current.scrollTop = siteRef.current.scrollHeight;
+      // Hide content initially
+      setContentReady(false);
+      
+      // Scroll to bottom instantly (before content is visible)
+      requestAnimationFrame(() => {
+        if (siteRef.current) {
+          siteRef.current.scrollTop = siteRef.current.scrollHeight;
+          // Show content after scroll is set
+          setTimeout(() => setContentReady(true), 50);
+        }
+      });
     }
   }, [showGate]);
 
@@ -171,6 +181,8 @@ export default function Home() {
       const passed = localStorage.getItem('os_gate_passed');
       if (passed === '1') {
         setShowGate(false);
+        // If user already passed gate, show content immediately
+        setContentReady(true);
       }
     } catch (e) {
       // If localStorage is blocked, show gate
@@ -387,7 +399,10 @@ export default function Home() {
           </header>
 
           {/* Main Scrollable Content */}
-          <div ref={siteRef} className="h-screen overflow-y-auto scroll-smooth snap-y snap-mandatory pb-[72px] relative z-10">
+          <div 
+            ref={siteRef} 
+            className={`h-screen overflow-y-auto scroll-smooth snap-y snap-mandatory pb-[72px] relative z-10 transition-opacity duration-300 ${contentReady ? 'opacity-100' : 'opacity-0'}`}
+          >
             {/* Footer - First in DOM for scroll-up effect */}
             <footer className="bg-[#090a0d] text-center py-8 text-gray-500 text-sm snap-start">
               © 2025 OrdinalStrategy.fun — Built with precision on Bitcoin.
