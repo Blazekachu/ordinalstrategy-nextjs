@@ -56,32 +56,49 @@ export default function Home() {
     canvas.style.height = window.innerHeight + 'px';
     ctx.scale(dpr, dpr);
 
-    const fontSize = 14;
+    // Fill canvas with black initially
+    ctx.fillStyle = '#000000';
+    ctx.fillRect(0, 0, window.innerWidth, window.innerHeight);
+
+    const fontSize = 16;
     const cols = Math.floor(window.innerWidth / fontSize);
-    const drops = new Array(cols).fill(0);
-    ctx.font = `${fontSize}px monospace`;
+    const drops = new Array(cols).fill(1).map(() => Math.random() * -100);
+    ctx.font = `bold ${fontSize}px monospace`;
 
     let animationId: number;
     const drawMatrix = () => {
-      ctx.fillStyle = 'rgba(0,0,0,0.12)';
+      // Semi-transparent black to create fade effect
+      ctx.fillStyle = 'rgba(0, 0, 0, 0.05)';
       ctx.fillRect(0, 0, window.innerWidth, window.innerHeight);
 
       for (let i = 0; i < cols; i++) {
         const char = Math.random() < 0.5 ? '0' : '1';
         const x = i * fontSize;
         const y = drops[i] * fontSize;
-        const highlight = Math.random() < 0.06;
+        
+        // Add random highlights for shimmer effect
+        const highlight = Math.random() < 0.03;
         ctx.fillStyle = highlight ? '#ffffff' : '#f7931a';
+        ctx.shadowColor = highlight ? '#ffffff' : '#f7931a';
+        ctx.shadowBlur = highlight ? 10 : 5;
+        
         ctx.fillText(char, x, y);
 
-        if (y > window.innerHeight && Math.random() > 0.975) drops[i] = 0;
-        else drops[i]++;
+        // Reset drop to top when it reaches bottom
+        if (y > window.innerHeight && Math.random() > 0.975) {
+          drops[i] = 0;
+        } else {
+          drops[i]++;
+        }
       }
+      
       animationId = requestAnimationFrame(drawMatrix);
     };
 
     drawMatrix();
-    return () => cancelAnimationFrame(animationId);
+    return () => {
+      cancelAnimationFrame(animationId);
+    };
   }, [showGate]);
 
   // Matrix background animation for main site
