@@ -47,60 +47,57 @@ export default function Home() {
     if (!showGate || !gateCanvasRef.current) return;
 
     const canvas = gateCanvasRef.current;
-    const ctx = canvas.getContext('2d');
+    const ctx = canvas.getContext('2d', { alpha: false });
     if (!ctx) return;
 
-    canvas.width = window.innerWidth;
-    canvas.height = window.innerHeight;
+    // Set canvas size
+    const resizeCanvas = () => {
+      canvas.width = window.innerWidth;
+      canvas.height = window.innerHeight;
+    };
+    resizeCanvas();
+    window.addEventListener('resize', resizeCanvas);
 
-    // Fill with black
-    ctx.fillStyle = '#000000';
-    ctx.fillRect(0, 0, canvas.width, canvas.height);
-
-    const fontSize = 24;
-    const cols = Math.floor(canvas.width / fontSize);
+    const fontSize = 18;
+    const columns = Math.floor(canvas.width / fontSize);
     const drops: number[] = [];
-    for (let i = 0; i < cols; i++) {
-      drops[i] = Math.floor(Math.random() * canvas.height / fontSize);
+    
+    // Initialize drops
+    for (let i = 0; i < columns; i++) {
+      drops[i] = 1;
     }
 
-    let animationId: number;
-    const drawMatrix = () => {
-      // Slight fade effect
-      ctx.fillStyle = 'rgba(0, 0, 0, 0.04)';
+    const draw = () => {
+      // Black background with low opacity for trail effect
+      ctx.fillStyle = 'rgba(0, 0, 0, 0.05)';
       ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-      ctx.font = `bold ${fontSize}px monospace`;
-      
+      // Set text style
+      ctx.fillStyle = '#0F0'; // Classic matrix green - VERY VISIBLE!
+      ctx.font = `${fontSize}px monospace`;
+
+      // Draw characters
       for (let i = 0; i < drops.length; i++) {
         const text = Math.random() > 0.5 ? '1' : '0';
         const x = i * fontSize;
         const y = drops[i] * fontSize;
-        
-        // Random brightness
-        if (Math.random() > 0.9) {
-          ctx.fillStyle = '#fff';
-          ctx.shadowBlur = 20;
-          ctx.shadowColor = '#fff';
-        } else {
-          ctx.fillStyle = '#f7931a';
-          ctx.shadowBlur = 10;
-          ctx.shadowColor = '#f7931a';
-        }
-        
+
         ctx.fillText(text, x, y);
 
-        if (y > canvas.height && Math.random() > 0.95) {
+        // Reset drop randomly
+        if (y > canvas.height && Math.random() > 0.975) {
           drops[i] = 0;
         }
         drops[i]++;
       }
-      
-      animationId = requestAnimationFrame(drawMatrix);
     };
 
-    drawMatrix();
-    return () => cancelAnimationFrame(animationId);
+    const interval = setInterval(draw, 50);
+    
+    return () => {
+      clearInterval(interval);
+      window.removeEventListener('resize', resizeCanvas);
+    };
   }, [showGate]);
 
   // Matrix background animation for main site
