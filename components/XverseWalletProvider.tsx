@@ -44,26 +44,33 @@ export function XverseWalletProvider({ children }: { children: ReactNode }) {
     const savedAddress = localStorage.getItem('xverse_address');
     const savedOrdinalsAddress = localStorage.getItem('xverse_ordinals_address');
     if (savedAddress && savedOrdinalsAddress) {
-      setWalletState(prev => ({
-        ...prev,
-        connected: true,
-        address: savedAddress,
-        ordinalsAddress: savedOrdinalsAddress,
-      }));
-      fetchBalance(savedAddress);
+      const initBalance = async () => {
+        const balance = await fetchBalance(savedAddress);
+        setWalletState(prev => ({
+          ...prev,
+          connected: true,
+          address: savedAddress,
+          ordinalsAddress: savedOrdinalsAddress,
+          balance,
+          nativeSegwit: { address: savedAddress, balance },
+          taproot: { address: savedOrdinalsAddress, balance: null },
+        }));
+      };
+      initBalance();
     }
   }, []);
 
-  const fetchBalance = async (address: string) => {
+  const fetchBalance = async (address: string): Promise<number | null> => {
     try {
       // Fetch balance from mempool.space API
       const response = await fetch(`https://mempool.space/api/address/${address}`);
       const data = await response.json();
       const balanceInSats = data.chain_stats.funded_txo_sum - data.chain_stats.spent_txo_sum;
       const balanceInBTC = balanceInSats / 100000000;
-      setWalletState(prev => ({ ...prev, balance: balanceInBTC }));
+      return balanceInBTC;
     } catch (error) {
       console.error('Error fetching balance:', error);
+      return null;
     }
   };
 
