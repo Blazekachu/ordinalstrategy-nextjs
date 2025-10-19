@@ -151,25 +151,32 @@ export default function Home() {
     };
   }, [showGate]);
 
-  // Reset content ready when gate is closed
+  // Handle content visibility when gate closes
   useEffect(() => {
-    if (!showGate) {
-      setContentReady(false); // Hide content initially
+    if (!showGate && siteRef.current) {
+      // Hide content first
+      setContentReady(false);
+      
+      // Set scroll position to bottom immediately
+      siteRef.current.scrollTop = siteRef.current.scrollHeight;
+      
+      // Show content after a brief delay to ensure scroll is set
+      const timer = setTimeout(() => {
+        setContentReady(true);
+      }, 100);
+      
+      return () => clearTimeout(timer);
     }
   }, [showGate]);
 
-  // Ref callback to set initial scroll position immediately on mount
+  // Ref callback to capture the site element
   const siteRefCallback = (node: HTMLDivElement | null) => {
-    if (node && !showGate) {
+    if (node) {
       siteRef.current = node;
-      // Set scroll to bottom immediately when element is mounted
-      node.scrollTop = node.scrollHeight;
-      // Show content after scroll is set (next frame)
-      requestAnimationFrame(() => {
-        requestAnimationFrame(() => {
-          setContentReady(true);
-        });
-      });
+      // If user already passed gate (returning user), set scroll immediately
+      if (!showGate) {
+        node.scrollTop = node.scrollHeight;
+      }
     }
   };
 
