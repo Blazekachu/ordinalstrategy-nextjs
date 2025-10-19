@@ -46,6 +46,9 @@ export default function ProfilePage() {
   const [activeTab, setActiveTab] = useState<'addresses' | 'games' | 'inscriptions'>('addresses');
   const [inscriptions, setInscriptions] = useState<any[]>([]);
   const [loadingInscriptions, setLoadingInscriptions] = useState(false);
+  const [sparkAddressInput, setSparkAddressInput] = useState('');
+  const [sparkBalance, setSparkBalance] = useState<{ btcSoftBalanceSats: number; btcHardBalanceSats: number; tokens: any[] } | null>(null);
+  const [loadingSparkBalance, setLoadingSparkBalance] = useState(false);
   const canvasRef = useRef<HTMLCanvasElement>(null);
 
   // Matrix animation background
@@ -123,6 +126,41 @@ export default function ProfilePage() {
       fetchInscriptions();
     }
   }, [activeTab, ordinalsAddress]);
+
+  useEffect(() => {
+    // Load saved Spark address from localStorage
+    const savedSparkAddress = localStorage.getItem('spark_address');
+    if (savedSparkAddress) {
+      setSparkAddressInput(savedSparkAddress);
+      fetchSparkBalance(savedSparkAddress);
+    }
+  }, []);
+
+  const fetchSparkBalance = async (sparkAddr: string) => {
+    if (!sparkAddr || !sparkAddr.startsWith('sp')) {
+      return;
+    }
+
+    setLoadingSparkBalance(true);
+    try {
+      const response = await fetch(`/api/spark/balance?address=${sparkAddr}`);
+      if (response.ok) {
+        const data = await response.json();
+        setSparkBalance(data.balance);
+        localStorage.setItem('spark_address', sparkAddr);
+      }
+    } catch (error) {
+      console.error('Error fetching Spark balance:', error);
+    } finally {
+      setLoadingSparkBalance(false);
+    }
+  };
+
+  const handleSparkAddressSubmit = () => {
+    if (sparkAddressInput) {
+      fetchSparkBalance(sparkAddressInput);
+    }
+  };
 
   const fetchUserData = async () => {
     try {
@@ -258,7 +296,7 @@ export default function ProfilePage() {
                 <div className="flex items-center gap-2">
                   <h1 className="text-2xl md:text-3xl font-bold text-[#f7931a] drop-shadow-[0_0_20px_rgba(247,147,26,0.5)] break-all">
                     {address && `${address.slice(0, 8)}...${address.slice(-8)}`}
-                  </h1>
+              </h1>
                   <span className="text-2xl">🎮</span>
                 </div>
                 {balance !== null && (
@@ -281,26 +319,26 @@ export default function ProfilePage() {
           </div>
         </div>
 
-            {/* Tabs */}
-            <div className="flex gap-4 mb-8 border-b border-gray-700">
+        {/* Tabs */}
+        <div className="flex gap-4 mb-8 border-b border-gray-700">
               {[
                 { key: 'addresses', label: 'Addresses & Sats' },
                 { key: 'games', label: 'Games' },
                 { key: 'inscriptions', label: 'Inscriptions' }
               ].map((tab) => (
-                <button
+            <button
                   key={tab.key}
                   onClick={() => setActiveTab(tab.key as any)}
                   className={`px-6 py-3 font-semibold transition-colors ${
                     activeTab === tab.key
-                      ? 'text-[#f7931a] border-b-2 border-[#f7931a]'
-                      : 'text-gray-400 hover:text-white'
-                  }`}
-                >
+                  ? 'text-[#f7931a] border-b-2 border-[#f7931a]'
+                  : 'text-gray-400 hover:text-white'
+              }`}
+            >
                   {tab.label}
-                </button>
-              ))}
-            </div>
+            </button>
+          ))}
+        </div>
 
         {/* Tab Content */}
         {loading ? (
@@ -359,38 +397,90 @@ export default function ProfilePage() {
                 )}
 
                 {/* Spark (Bitcoin L2) */}
-                {spark && (
-                  <div className="group bg-gradient-to-br from-[#111317]/90 to-[#1b1c1f]/90 backdrop-blur-sm p-6 rounded-2xl border-2 border-blue-500/20 hover:border-blue-500/60 hover:shadow-[0_10px_40px_rgba(59,130,246,0.2)] transition-all duration-300">
-                    <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-                      <div className="flex-1">
-                        <div className="text-blue-400 text-sm mb-2 uppercase tracking-wider font-semibold flex items-center gap-2">
-                          <span className="text-2xl">⚡</span>
-                          Spark L2 (Bitcoin Native)
+                <div className="group bg-gradient-to-br from-[#111317]/90 to-[#1b1c1f]/90 backdrop-blur-sm p-6 rounded-2xl border-2 border-blue-500/20 hover:border-blue-500/60 hover:shadow-[0_10px_40px_rgba(59,130,246,0.2)] transition-all duration-300">
+                  <div className="flex flex-col gap-4">
+                    <div className="text-blue-400 text-sm uppercase tracking-wider font-semibold flex items-center gap-2">
+                      <span className="text-2xl">⚡</span>
+                      Spark L2 (Bitcoin Native)
+                    </div>
+                    
+                    {/* Spark Address Input */}
+                    <div className="flex flex-col md:flex-row gap-3">
+                      <input
+                        type="text"
+                        value={sparkAddressInput}
+                        onChange={(e) => setSparkAddressInput(e.target.value)}
+                        placeholder="Enter your Spark address (sp...)"
+                        className="flex-1 bg-black/40 border border-blue-500/30 rounded-lg px-4 py-3 text-white font-mono text-sm focus:outline-none focus:border-blue-500/60 transition-colors"
+                      />
+                      <button
+                        onClick={handleSparkAddressSubmit}
+                        disabled={loadingSparkBalance}
+                        className="bg-blue-500 text-white px-6 py-3 rounded-lg font-semibold hover:bg-blue-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap"
+                      >
+                        {loadingSparkBalance ? '...' : 'Connect Spark'}
+                      </button>
+                    </div>
+
+                    {/* Spark Balance Display */}
+                    {sparkBalance && (
+                      <div className="mt-4 space-y-4">
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                          {/* Soft Balance */}
+                          <div className="bg-black/40 p-4 rounded-lg border border-blue-500/20">
+                            <div className="text-xs text-gray-400 mb-1">Soft Balance</div>
+                            <div className="text-2xl font-bold text-blue-300">
+                              {(sparkBalance.btcSoftBalanceSats / 100000000).toFixed(8)}
+                            </div>
+                            <div className="text-xs text-gray-400">BTC</div>
+                          </div>
+
+                          {/* Hard Balance */}
+                          <div className="bg-black/40 p-4 rounded-lg border border-blue-500/20">
+                            <div className="text-xs text-gray-400 mb-1">Hard Balance</div>
+                            <div className="text-2xl font-bold text-blue-300">
+                              {(sparkBalance.btcHardBalanceSats / 100000000).toFixed(8)}
+                            </div>
+                            <div className="text-xs text-gray-400">BTC</div>
+                          </div>
                         </div>
-                        <div className="text-white font-mono text-sm break-all bg-black/40 p-3 rounded-lg">
-                          {spark.address}
-                        </div>
-                        <div className="mt-2 text-xs text-gray-500">
-                          Fast, near-zero cost Bitcoin transactions
-                        </div>
+
+                        {/* BTKN Tokens */}
+                        {sparkBalance.tokens && sparkBalance.tokens.length > 0 && (
+                          <div className="bg-black/40 p-4 rounded-lg border border-blue-500/20">
+                            <div className="text-xs text-gray-400 mb-2">BTKN Tokens</div>
+                            <div className="space-y-2">
+                              {sparkBalance.tokens.map((token: any, index: number) => (
+                                <div key={index} className="flex justify-between items-center">
+                                  <span className="text-white">{token.ticker || token.name}</span>
+                                  <span className="text-blue-300 font-mono">{token.balance}</span>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        )}
                       </div>
-                      <div className="text-right">
-                        <div className="text-3xl font-bold text-blue-300">
-                          {spark.balance !== null ? spark.balance.toFixed(8) : '...'}
-                        </div>
-                        <div className="text-sm text-gray-400">BTC</div>
-                      </div>
+                    )}
+
+                    <div className="text-xs text-gray-500">
+                      Fast, near-zero cost Bitcoin transactions. Get your Spark address from Xverse wallet.
                     </div>
                   </div>
-                )}
+                </div>
 
                 {/* Refresh Button */}
                 <div className="flex justify-center pt-4">
                   <button
-                    onClick={refreshBalances}
+                    onClick={() => {
+                      refreshBalances();
+                      const savedSparkAddress = localStorage.getItem('spark_address');
+                      if (savedSparkAddress) {
+                        fetchSparkBalance(savedSparkAddress);
+                      }
+                    }}
                     className="bg-[#f7931a] text-[#0b0c10] px-6 py-3 rounded-lg font-semibold hover:bg-[#ffd166] hover:-translate-y-0.5 transition-all flex items-center gap-2"
                   >
-                    🔄 Refresh Balances
+                    🔄 Refresh All Balances
                   </button>
                 </div>
               </div>
@@ -415,20 +505,20 @@ export default function ProfilePage() {
                     <div className="relative">
                       <div className="text-[#f7931a] text-xs md:text-sm mb-2 uppercase tracking-wider font-semibold">Average Score</div>
                       <div className="text-3xl md:text-4xl font-bold text-white">
-                        {scores.length > 0
-                          ? Math.round(scores.reduce((sum, s) => sum + s.score, 0) / scores.length).toLocaleString()
-                          : 0}
-                      </div>
-                    </div>
+                    {scores.length > 0
+                      ? Math.round(scores.reduce((sum, s) => sum + s.score, 0) / scores.length).toLocaleString()
+                      : 0}
+                  </div>
+                </div>
                   </div>
                   <div className="group bg-gradient-to-br from-[#111317]/90 to-[#1b1c1f]/90 backdrop-blur-sm p-6 rounded-2xl border-2 border-[#f7931a]/20 hover:border-[#f7931a]/60 hover:shadow-[0_10px_40px_rgba(247,147,26,0.2)] hover:-translate-y-1 transition-all duration-300 relative overflow-hidden">
                     <div className="absolute top-0 right-0 text-6xl opacity-10 group-hover:opacity-20 transition-opacity">🪙</div>
                     <div className="relative">
                       <div className="text-[#f7931a] text-xs md:text-sm mb-2 uppercase tracking-wider font-semibold">Total Coins</div>
                       <div className="text-3xl md:text-4xl font-bold text-white">
-                        {scores.reduce((sum, s) => sum + (s.coinsCollected || 0), 0).toLocaleString()}
-                      </div>
-                    </div>
+                    {scores.reduce((sum, s) => sum + (s.coinsCollected || 0), 0).toLocaleString()}
+                  </div>
+                </div>
                   </div>
                   <div className="group bg-gradient-to-br from-[#111317]/90 to-[#1b1c1f]/90 backdrop-blur-sm p-6 rounded-2xl border-2 border-[#f7931a]/20 hover:border-[#f7931a]/60 hover:shadow-[0_10px_40px_rgba(247,147,26,0.2)] hover:-translate-y-1 transition-all duration-300 relative overflow-hidden">
                     <div className="absolute top-0 right-0 text-6xl opacity-10 group-hover:opacity-20 transition-opacity">⏱️</div>
@@ -447,36 +537,36 @@ export default function ProfilePage() {
                     <h3 className="text-xl font-bold text-[#f7931a]">Game History</h3>
                   </div>
                   <div className="overflow-x-auto">
-                    <table className="w-full">
+                <table className="w-full">
                       <thead className="bg-[#1b1c1f]/50">
-                        <tr>
-                          <th className="px-6 py-4 text-left text-[#f7931a] font-semibold">Date</th>
-                          <th className="px-6 py-4 text-left text-[#f7931a] font-semibold">Score</th>
-                          <th className="px-6 py-4 text-left text-[#f7931a] font-semibold">Level</th>
-                          <th className="px-6 py-4 text-left text-[#f7931a] font-semibold">Coins</th>
-                          <th className="px-6 py-4 text-left text-[#f7931a] font-semibold">Play Time</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {scores.length > 0 ? (
-                          scores.map((score) => (
+                    <tr>
+                      <th className="px-6 py-4 text-left text-[#f7931a] font-semibold">Date</th>
+                      <th className="px-6 py-4 text-left text-[#f7931a] font-semibold">Score</th>
+                      <th className="px-6 py-4 text-left text-[#f7931a] font-semibold">Level</th>
+                      <th className="px-6 py-4 text-left text-[#f7931a] font-semibold">Coins</th>
+                      <th className="px-6 py-4 text-left text-[#f7931a] font-semibold">Play Time</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {scores.length > 0 ? (
+                      scores.map((score) => (
                             <tr key={score._id} className="border-t border-gray-700 hover:bg-[#1b1c1f]/30 transition-colors">
-                              <td className="px-6 py-4 text-gray-300">{formatDate(score.createdAt)}</td>
-                              <td className="px-6 py-4 text-white font-bold">{score.score.toLocaleString()}</td>
-                              <td className="px-6 py-4 text-gray-300">{score.level}</td>
-                              <td className="px-6 py-4 text-yellow-400">{score.coinsCollected}</td>
-                              <td className="px-6 py-4 text-gray-300">{formatTime(score.playTime)}</td>
-                            </tr>
-                          ))
-                        ) : (
-                          <tr>
-                            <td colSpan={5} className="px-6 py-12 text-center text-gray-400">
-                              No games played yet. <Link href="/foxjump" className="text-[#f7931a] hover:underline">Play now!</Link>
-                            </td>
-                          </tr>
-                        )}
-                      </tbody>
-                    </table>
+                          <td className="px-6 py-4 text-gray-300">{formatDate(score.createdAt)}</td>
+                          <td className="px-6 py-4 text-white font-bold">{score.score.toLocaleString()}</td>
+                          <td className="px-6 py-4 text-gray-300">{score.level}</td>
+                          <td className="px-6 py-4 text-yellow-400">{score.coinsCollected}</td>
+                          <td className="px-6 py-4 text-gray-300">{formatTime(score.playTime)}</td>
+                        </tr>
+                      ))
+                    ) : (
+                      <tr>
+                        <td colSpan={5} className="px-6 py-12 text-center text-gray-400">
+                          No games played yet. <Link href="/foxjump" className="text-[#f7931a] hover:underline">Play now!</Link>
+                        </td>
+                      </tr>
+                    )}
+                  </tbody>
+                </table>
                   </div>
                 </div>
               </div>
