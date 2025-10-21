@@ -18,10 +18,24 @@ export async function POST(request: NextRequest) {
 
     await dbConnect();
 
-    // Find or create user
-    let user = await User.findOne({ privyId });
+    // Find or create user - privyId is now the wallet address
+    let user = await User.findOne({ 
+      $or: [
+        { privyId: privyId },
+        { walletAddress: privyId }
+      ]
+    });
+    
     if (!user) {
-      user = await User.create({ privyId });
+      // Create new user with wallet address
+      user = await User.create({ 
+        privyId: privyId,
+        walletAddress: privyId,
+        totalScore: 0,
+        gamesPlayed: 0,
+        highScore: 0,
+        inscriptionCount: 0,
+      });
     }
 
     // Create game score
@@ -49,10 +63,10 @@ export async function POST(request: NextRequest) {
 
     await User.findByIdAndUpdate(user._id, updateData);
 
-    return NextResponse.json({ gameScore }, { status: 201 });
-  } catch (error) {
+    return NextResponse.json({ gameScore, success: true }, { status: 201 });
+  } catch (error: any) {
     console.error('Error submitting score:', error);
-    return NextResponse.json({ error: 'Failed to submit score' }, { status: 500 });
+    return NextResponse.json({ error: error.message || 'Failed to submit score' }, { status: 500 });
   }
 }
 
@@ -70,10 +84,16 @@ export async function GET(request: NextRequest) {
 
     if (type === 'user' && (privyId || walletAddress)) {
       // Get user's scores - support both privyId and walletAddress
-      const query = privyId ? { privyId } : { walletAddress };
-      const user = await User.findOne(query);
+      const searchAddress = privyId || walletAddress;
+      const user = await User.findOne({ 
+        $or: [
+          { privyId: searchAddress },
+          { walletAddress: searchAddress }
+        ]
+      });
+      
       if (!user) {
-        return NextResponse.json({ scores: [] }, { status: 200 });
+        return NextResponse.json({ scores: [], user: null }, { status: 200 });
       }
 
       const scores = await GameScore.find({

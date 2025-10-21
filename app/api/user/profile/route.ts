@@ -24,12 +24,18 @@ export async function PUT(request: NextRequest) {
       );
     }
 
-    // Find or create user
-    let user = await User.findOne({ walletAddress });
+    // Find user by wallet address OR privyId (since we use wallet as privyId)
+    let user = await User.findOne({ 
+      $or: [
+        { walletAddress: walletAddress },
+        { privyId: walletAddress }
+      ]
+    });
 
     if (!user) {
+      // Create new user with wallet address as both privyId and walletAddress
       user = await User.create({
-        privyId: walletAddress, // Use wallet as privyId for Xverse users
+        privyId: walletAddress,
         walletAddress,
         username,
         profilePic,
@@ -37,9 +43,12 @@ export async function PUT(request: NextRequest) {
         taprootAddress,
         sparkAddress,
         inscriptionCount: inscriptionCount || 0,
+        totalScore: 0,
+        gamesPlayed: 0,
+        highScore: 0,
       });
     } else {
-      // Update user
+      // Update user fields
       if (username !== undefined) user.username = username;
       if (profilePic !== undefined) user.profilePic = profilePic;
       if (nativeSegwitAddress !== undefined) user.nativeSegwitAddress = nativeSegwitAddress;
@@ -47,14 +56,19 @@ export async function PUT(request: NextRequest) {
       if (sparkAddress !== undefined) user.sparkAddress = sparkAddress;
       if (inscriptionCount !== undefined) user.inscriptionCount = inscriptionCount;
       
+      // Ensure walletAddress is set if it wasn't before
+      if (!user.walletAddress) {
+        user.walletAddress = walletAddress;
+      }
+      
       await user.save();
     }
 
     return NextResponse.json({ success: true, user });
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error updating user profile:', error);
     return NextResponse.json(
-      { error: 'Failed to update profile' },
+      { error: error.message || 'Failed to update profile' },
       { status: 500 }
     );
   }
@@ -74,13 +88,24 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    const user = await User.findOne({ walletAddress });
+    // Find user by wallet address OR privyId
+    let user = await User.findOne({ 
+      $or: [
+        { walletAddress: walletAddress },
+        { privyId: walletAddress }
+      ]
+    });
 
     if (!user) {
-      return NextResponse.json(
-        { error: 'User not found' },
-        { status: 404 }
-      );
+      // Create a new user if not found
+      user = await User.create({
+        privyId: walletAddress,
+        walletAddress,
+        totalScore: 0,
+        gamesPlayed: 0,
+        highScore: 0,
+        inscriptionCount: 0,
+      });
     }
 
     return NextResponse.json({ user });
