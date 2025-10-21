@@ -99,7 +99,23 @@ export async function PUT(request: NextRequest) {
       user = updatedUser;
     }
 
-    return NextResponse.json({ success: true, user });
+    // Transform to camelCase for frontend compatibility
+    const transformedUser = {
+      privyId: user.privy_id,
+      username: user.username,
+      profilePic: user.profile_pic,
+      twitterHandle: user.twitter_handle,
+      walletAddress: user.wallet_address,
+      nativeSegwitAddress: user.native_segwit_address,
+      taprootAddress: user.taproot_address,
+      sparkAddress: user.spark_address,
+      totalScore: user.total_score,
+      gamesPlayed: user.games_played,
+      highScore: user.high_score,
+      inscriptionCount: user.inscription_count,
+    };
+
+    return NextResponse.json({ success: true, user: transformedUser });
   } catch (error: any) {
     console.error('Error updating user profile:', error);
     return NextResponse.json(
@@ -151,7 +167,23 @@ export async function GET(request: NextRequest) {
       user = existingUsers[0];
     }
 
-    return NextResponse.json({ user });
+    // Transform to camelCase for frontend compatibility
+    const transformedUser = {
+      privyId: user.privy_id,
+      username: user.username,
+      profilePic: user.profile_pic,
+      twitterHandle: user.twitter_handle,
+      walletAddress: user.wallet_address,
+      nativeSegwitAddress: user.native_segwit_address,
+      taprootAddress: user.taproot_address,
+      sparkAddress: user.spark_address,
+      totalScore: user.total_score,
+      gamesPlayed: user.games_played,
+      highScore: user.high_score,
+      inscriptionCount: user.inscription_count,
+    };
+
+    return NextResponse.json({ user: transformedUser });
   } catch (error) {
     console.error('Error fetching user profile:', error);
     return NextResponse.json(

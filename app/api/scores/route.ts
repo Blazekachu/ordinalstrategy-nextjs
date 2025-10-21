@@ -51,6 +51,9 @@ export async function POST(request: NextRequest) {
         user_id: user.id,
         game_type: gameName,
         score: score,
+        level: level || 1,
+        coins_collected: coinsCollected || 0,
+        play_time: playTime || 0,
       })
       .select()
       .single();
@@ -113,7 +116,18 @@ export async function GET(request: NextRequest) {
         .order('created_at', { ascending: false })
         .limit(limit);
 
-      return NextResponse.json({ scores: scores || [], user }, { status: 200 });
+      // Transform to camelCase for frontend compatibility
+      const transformedScores = scores?.map((score: any) => ({
+        _id: score.id,
+        score: score.score,
+        level: score.level || 0,
+        coinsCollected: score.coins_collected || 0,
+        playTime: score.play_time || 0,
+        createdAt: score.created_at,
+        gameName: score.game_type,
+      })) || [];
+
+      return NextResponse.json({ scores: transformedScores, user }, { status: 200 });
     } else {
       // Get leaderboard (top scores)
       const { data: scores } = await supabaseAdmin

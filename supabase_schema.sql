@@ -27,6 +27,9 @@ CREATE TABLE IF NOT EXISTS game_scores (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id UUID REFERENCES users(id) ON DELETE CASCADE,
   score INTEGER NOT NULL,
+  level INTEGER DEFAULT 1,
+  coins_collected INTEGER DEFAULT 0,
+  play_time INTEGER DEFAULT 0,
   game_type TEXT DEFAULT 'foxjump',
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
