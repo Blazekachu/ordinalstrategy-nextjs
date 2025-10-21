@@ -17,9 +17,17 @@ interface GameScore {
 
 interface UserData {
   privyId: string;
+  username?: string;
+  profilePic?: string;
   twitterHandle?: string;
+  walletAddress?: string;
+  nativeSegwitAddress?: string;
+  taprootAddress?: string;
+  sparkAddress?: string;
   totalScore: number;
   gamesPlayed: number;
+  highScore: number;
+  inscriptionCount: number;
 }
 
 export default function ProfilePage() {
