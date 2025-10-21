@@ -17,9 +17,14 @@ export default function FoxJumpGame() {
       if (event.data.type === 'GAME_SCORE') {
         const { score, level, coins, playTime } = event.data;
         
+        console.log('Game score received:', { score, level, coins, playTime });
+        console.log('Wallet status:', { connected, address });
+        
         // Use Xverse wallet address as the primary identifier
         if (connected && address) {
           try {
+            console.log('Submitting score to API with address:', address);
+            
             // Submit score to API
             const response = await fetch('/api/scores', {
               method: 'POST',
@@ -36,16 +41,21 @@ export default function FoxJumpGame() {
               }),
             });
 
+            const result = await response.json();
+            console.log('API Response:', result);
+
             if (response.ok) {
-              console.log('Score submitted successfully!');
+              console.log('✓ Score submitted successfully!');
               setLastScoreSubmitted(true);
               setTimeout(() => setLastScoreSubmitted(false), 3000);
+            } else {
+              console.error('✗ Failed to submit score:', result);
             }
           } catch (error) {
-            console.error('Error submitting score:', error);
+            console.error('✗ Error submitting score:', error);
           }
         } else {
-          console.log('Wallet not connected - score not saved');
+          console.log('⚠ Wallet not connected - score not saved');
         }
       }
     };

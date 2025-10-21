@@ -24,6 +24,24 @@ export async function PUT(request: NextRequest) {
       );
     }
 
+    // Check if username is taken by another user
+    if (username) {
+      const existingUser = await User.findOne({ 
+        username: username,
+        $nor: [
+          { walletAddress: walletAddress },
+          { privyId: walletAddress }
+        ]
+      });
+      
+      if (existingUser) {
+        return NextResponse.json(
+          { error: 'Username already taken. Please choose a different one.' },
+          { status: 400 }
+        );
+      }
+    }
+
     // Find user by wallet address OR privyId (since we use wallet as privyId)
     let user = await User.findOne({ 
       $or: [
@@ -37,8 +55,8 @@ export async function PUT(request: NextRequest) {
       user = await User.create({
         privyId: walletAddress,
         walletAddress,
-        username,
-        profilePic,
+        username: username || undefined,
+        profilePic: profilePic || undefined,
         nativeSegwitAddress,
         taprootAddress,
         sparkAddress,

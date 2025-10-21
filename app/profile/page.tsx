@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { usePrivy } from '@privy-io/react-auth';
 import { useRouter } from 'next/navigation';
 import { useXverseWallet } from '@/components/XverseWalletProvider';
+import ScrollButton from '@/components/ScrollButton';
 
 interface GameScore {
   _id: string;
@@ -260,7 +261,11 @@ export default function ProfilePage() {
           setProfileSaveMessage(null);
         }, 1500);
       } else {
-        setProfileSaveMessage({ type: 'error', text: 'Failed to save profile. Please try again.' });
+        const errorData = await response.json();
+        setProfileSaveMessage({ 
+          type: 'error', 
+          text: errorData.error || 'Failed to save profile. Please try again.' 
+        });
       }
     } catch (error) {
       console.error('Error saving profile:', error);
@@ -343,14 +348,17 @@ export default function ProfilePage() {
           </Link>
         </div>
         <nav className="flex gap-4 items-center">
-          <Link href="/" className="text-[#f7931a] font-medium hover:text-white transition-colors">Home</Link>
-          <Link href="/strategy" className="text-[#f7931a] font-medium hover:text-white transition-colors">Strategy</Link>
-          <button
-            onClick={() => { disconnect(); router.push('/'); }}
-            className="bg-red-600 text-white px-4 py-2 rounded-lg font-medium hover:bg-red-700 transition-colors"
-          >
-            Disconnect
-          </button>
+          <Link href="/" className="text-[#f7931a] font-medium hover:text-white transition-colors text-sm md:text-base">Home</Link>
+          <Link href="/strategy" className="text-[#f7931a] font-medium hover:text-white transition-colors text-sm md:text-base">Strategy</Link>
+          <div className="w-48">
+            <ScrollButton
+              text="Disconnect"
+              onComplete={() => { disconnect(); router.push('/'); }}
+              backgroundColor="#ef4444"
+              textColor="#ffffff"
+              accentColor="#ffffff"
+            />
+          </div>
         </nav>
       </header>
 
@@ -871,9 +879,9 @@ export default function ProfilePage() {
                           </div>
                         </div>
                       ))}
-                    </div>
-                  </div>
-                )}
+                </div>
+              </div>
+            )}
 
                 {/* Full Game History Table */}
                 <div className="bg-[#111317]/90 backdrop-blur-sm rounded-2xl overflow-hidden border-2 border-[#f7931a]/20 shadow-lg">
