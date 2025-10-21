@@ -495,15 +495,15 @@ export default function Home() {
           {/* Main Scrollable Content */}
           <div 
             ref={siteRefCallback}
-            className={`h-screen overflow-y-auto scroll-smooth snap-y snap-mandatory pb-[72px] relative z-10 transition-opacity duration-200 ${contentReady ? 'opacity-100' : 'opacity-0'}`}
+            className={`h-screen overflow-y-auto scroll-smooth pb-[72px] relative z-10 transition-opacity duration-200 ${contentReady ? 'opacity-100' : 'opacity-0'}`}
           >
             {/* Footer - First in DOM for scroll-up effect */}
-            <footer className="bg-[#090a0d] text-center py-8 text-gray-500 text-sm snap-start">
+            <footer className="bg-[#090a0d] text-center py-8 text-gray-500 text-sm">
               © 2025 OrdinalStrategy.fun — Built with precision on Bitcoin.
             </footer>
 
             {/* Community Section */}
-            <section id="community" className="min-h-screen flex flex-col justify-center items-center px-6 md:px-[10%] py-24 snap-start">
+            <section id="community" className="min-h-screen flex flex-col justify-center items-center px-6 md:px-[10%] py-24">
               <h3 className="text-3xl md:text-4xl text-[#f7931a] mb-6 text-center">Join the Movement</h3>
               <p className="text-center max-w-3xl mb-8 text-base md:text-lg px-4">
                 Ordinals are the art of precision join us in mastering the strategy.
@@ -519,7 +519,7 @@ export default function Home() {
 
 
             {/* About Section */}
-            <section id="about" className="min-h-screen flex flex-col justify-center items-center px-6 md:px-[10%] py-24 snap-start">
+            <section id="about" className="min-h-screen flex flex-col justify-center items-center px-6 md:px-[10%] py-24">
               <h3 className="text-3xl md:text-4xl text-[#f7931a] mb-6 text-center">Why Ordinal Strategy?</h3>
               <p className="text-center max-w-3xl text-base md:text-lg px-4">
                 We blend research, on-chain tools, and market data to empower collectors and creators. With precise insights and curated analytics, we help decode the Bitcoin Ordinals ecosystem for strategic advantage.
@@ -527,7 +527,7 @@ export default function Home() {
             </section>
 
             {/* Hero Section - Last in DOM for scroll-up effect */}
-            <section id="hero" className="min-h-screen flex flex-col justify-center items-center text-center px-4 md:px-[10%] bg-gradient-radial from-[#1b1c1f] to-[#0b0c10] snap-start">
+            <section id="hero" className="min-h-screen flex flex-col justify-center items-center text-center px-4 md:px-[10%] bg-gradient-radial from-[#1b1c1f] to-[#0b0c10]">
               <div className="bg-white/5 backdrop-blur-md border border-white/10 rounded-3xl p-6 md:p-12 max-w-3xl">
                 <h2 className="text-3xl md:text-5xl font-bold text-[#f7931a] mb-4">
                   Precision in the World of Bitcoin Ordinals

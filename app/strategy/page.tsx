@@ -140,58 +140,58 @@ export default function StrategyPage() {
       )}
 
       {/* Header */}
-      <header className="fixed top-0 left-0 right-0 z-[1000] bg-black/85 backdrop-blur-lg shadow-2xl flex items-center justify-between px-[10%] py-4">
+      <header className="fixed top-0 left-0 right-0 z-[1000] bg-black/85 backdrop-blur-lg shadow-2xl flex items-center justify-between px-4 md:px-[10%] py-3 md:py-4">
         <div className="logo">
           <Link href="/">
-            <img src="/osfun.png" alt="Ordinal Strategy Logo" className="h-[42px] w-auto object-contain hover:scale-105 transition-transform" />
+            <img src="/osfun.png" alt="Ordinal Strategy Logo" className="h-[32px] md:h-[42px] w-auto object-contain hover:scale-105 transition-transform" />
           </Link>
         </div>
-        <nav className="flex gap-4">
-          <Link href="/" className="text-[#f7931a] font-medium hover:text-white transition-colors">Home</Link>
-          <Link href="/#about" className="text-[#f7931a] font-medium hover:text-white transition-colors">About</Link>
-          <Link href="/#community" className="text-[#f7931a] font-medium hover:text-white transition-colors">Community</Link>
+        <nav className="flex gap-2 md:gap-4">
+          <Link href="/" className="text-[#f7931a] font-medium hover:text-white transition-colors text-xs md:text-base">Home</Link>
+          <Link href="/#about" className="text-[#f7931a] font-medium hover:text-white transition-colors text-xs md:text-base">About</Link>
+          <Link href="/#community" className="text-[#f7931a] font-medium hover:text-white transition-colors text-xs md:text-base">Community</Link>
         </nav>
       </header>
 
       {/* Main Content Container */}
       <div className="relative z-10 min-h-screen overflow-y-auto scroll-smooth">
-        <div className="flex flex-col items-center justify-center min-h-screen px-[10%] py-32">
+        <div className="flex flex-col items-center justify-center min-h-screen px-4 md:px-[10%] py-20 md:py-32">
           
           {/* Strategy Card */}
-          <div className="max-w-[900px] w-full bg-black/45 border border-[#f7931a]/35 rounded-[20px] shadow-2xl p-12 backdrop-blur-lg">
+          <div className="max-w-[900px] w-full bg-black/45 border border-[#f7931a]/35 rounded-[20px] shadow-2xl p-5 md:p-12 backdrop-blur-lg">
             
             {/* Header */}
-            <div className="text-center mb-10">
-              <h1 className="text-5xl font-bold text-[#f7931a] mb-4 drop-shadow-[0_0_20px_rgba(247,147,26,0.5)]">
+            <div className="text-center mb-6 md:mb-10">
+              <h1 className="text-3xl md:text-5xl font-bold text-[#f7931a] mb-3 md:mb-4 drop-shadow-[0_0_20px_rgba(247,147,26,0.5)]">
                 Strategy Protocol
               </h1>
-              <p className="text-xl text-gray-300 font-light italic">
+              <p className="text-base md:text-xl text-gray-300 font-light italic">
                 Balancing Asset Holders & Token Economics
               </p>
             </div>
 
             {/* Tweet Section */}
-            <div className="my-10 p-9 bg-white/3 border-l-4 border-[#f7931a] rounded-xl">
-              <ul className="space-y-3">
-                <li className="pl-8 relative text-lg text-white font-medium">
-                  <span className="absolute left-0 text-[#f7931a] text-xl font-bold">➔</span>
+            <div className="my-6 md:my-10 p-4 md:p-9 bg-white/3 border-l-4 border-[#f7931a] rounded-xl">
+              <ul className="space-y-2 md:space-y-3">
+                <li className="pl-6 md:pl-8 relative text-sm md:text-lg text-white font-medium">
+                  <span className="absolute left-0 text-[#f7931a] text-lg md:text-xl font-bold">➔</span>
                   Spread the buys
                 </li>
-                <li className="pl-8 relative text-lg text-white font-medium">
-                  <span className="absolute left-0 text-[#f7931a] text-xl font-bold">➔</span>
+                <li className="pl-6 md:pl-8 relative text-sm md:text-lg text-white font-medium">
+                  <span className="absolute left-0 text-[#f7931a] text-lg md:text-xl font-bold">➔</span>
                   Protocol spends <span className="text-[#ffd166] font-semibold">$N</span> daily
                 </li>
-                <li className="pl-8 relative text-lg text-white font-medium">
-                  <span className="absolute left-0 text-[#f7931a] text-xl font-bold">➔</span>
+                <li className="pl-6 md:pl-8 relative text-sm md:text-lg text-white font-medium">
+                  <span className="absolute left-0 text-[#f7931a] text-lg md:text-xl font-bold">➔</span>
                   If <span className="text-[#ffd166] font-semibold">$ordstrategytoken</span> &lt; <span className="text-[#ffd166] font-semibold">$X</span>, buy/burn tokens with <span className="text-[#ffd166] font-semibold">$N</span>. Otherwise, buy assets.
                 </li>
               </ul>
             </div>
 
             {/* Formula Section */}
-            <div className="mt-12 p-9 bg-[#f7931a]/8 border-2 border-[#f7931a]/30 rounded-2xl text-center">
-              <h3 className="text-2xl text-[#f7931a] mb-5 font-semibold">Protocol Logic</h3>
-              <div className="font-mono text-lg text-white bg-black/50 p-6 rounded-xl border-l-4 border-[#f7931a] text-left leading-loose">
+            <div className="mt-8 md:mt-12 p-4 md:p-9 bg-[#f7931a]/8 border-2 border-[#f7931a]/30 rounded-2xl text-center">
+              <h3 className="text-xl md:text-2xl text-[#f7931a] mb-4 md:mb-5 font-semibold">Protocol Logic</h3>
+              <div className="font-mono text-xs md:text-lg text-white bg-black/50 p-4 md:p-6 rounded-xl border-l-4 border-[#f7931a] text-left leading-loose overflow-x-auto">
                 <strong>IF</strong> <span className="text-[#ffd166] font-semibold">token_price</span> &lt; <span className="text-[#ffd166] font-semibold">threshold_X</span><br />
                 &nbsp;&nbsp;<strong>THEN</strong> <span className="text-[#ffd166] font-semibold">buy_and_burn(N)</span><br />
                 <strong>ELSE</strong><br />
@@ -200,8 +200,8 @@ export default function StrategyPage() {
             </div>
 
             {/* Mechanism Section */}
-            <div className="mt-12">
-              <h2 className="text-3xl text-[#f7931a] mb-8 text-center font-semibold">How It Works</h2>
+            <div className="mt-8 md:mt-12">
+              <h2 className="text-2xl md:text-3xl text-[#f7931a] mb-6 md:mb-8 text-center font-semibold">How It Works</h2>
               
               {/* Infinite Scrolling Blocks Container */}
               <div className="relative overflow-hidden">
@@ -279,7 +279,7 @@ export default function StrategyPage() {
             `}</style>
 
             {/* Action Buttons */}
-            <div className="flex justify-center gap-5 mt-12 flex-wrap items-center">
+            <div className="flex flex-col md:flex-row justify-center gap-4 md:gap-5 mt-8 md:mt-12 items-center">
               <ScrollButton
                 text="Join"
                 onComplete={handleCountMeIn}
@@ -287,7 +287,7 @@ export default function StrategyPage() {
                 textColor="#0b0c10"
                 accentColor="#ffffff"
               />
-              <Link href="/" className="bg-transparent border-2 border-[#f7931a] text-[#f7931a] px-9 py-4 rounded-full font-bold text-base hover:bg-[#f7931a] hover:text-[#0b0c10] transition-all">
+              <Link href="/" className="bg-transparent border-2 border-[#f7931a] text-[#f7931a] px-6 md:px-9 py-3 md:py-4 rounded-full font-bold text-sm md:text-base hover:bg-[#f7931a] hover:text-[#0b0c10] transition-all w-full md:w-auto text-center">
                 Back to Home
               </Link>
             </div>

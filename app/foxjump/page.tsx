@@ -163,13 +163,21 @@ export default function FoxJumpGame() {
       </div>
 
       {/* Game Container */}
-      <div className="w-full max-w-[1200px] h-screen flex items-center justify-center px-4 lg:px-72">
-        <div className="relative w-full h-full max-h-[900px] bg-black rounded-none lg:rounded-2xl overflow-hidden shadow-2xl border-0 lg:border-2 lg:border-[#f7931a]/50">
+      <div className="w-full max-w-[1200px] h-screen flex items-center justify-center px-0 lg:px-72">
+        <div className="relative w-full h-full lg:max-h-[900px] bg-black rounded-none lg:rounded-2xl overflow-hidden shadow-2xl border-0 lg:border-2 lg:border-[#f7931a]/50">
           <iframe
             src="/foxjump/index.html"
             className="w-full h-full border-none"
             title="FoxJump Game"
+            allow="accelerometer; gyroscope"
           />
+          
+          {/* Mobile Touch Instructions Overlay - appears briefly on mobile */}
+          <div className="lg:hidden absolute bottom-4 left-0 right-0 flex justify-center pointer-events-none z-20">
+            <div className="bg-black/80 backdrop-blur-md border border-[#f7931a]/50 rounded-full px-4 py-2 text-xs text-[#f7931a] animate-pulse">
+              Tap screen to control • Swipe left/right to move
+            </div>
+          </div>
         </div>
       </div>
     </div>
