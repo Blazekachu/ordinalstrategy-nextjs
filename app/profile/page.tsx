@@ -64,6 +64,7 @@ export default function ProfilePage() {
   const [editUsername, setEditUsername] = useState('');
   const [editProfilePic, setEditProfilePic] = useState('');
   const [savingProfile, setSavingProfile] = useState(false);
+  const [profileSaveMessage, setProfileSaveMessage] = useState<{type: 'success' | 'error', text: string} | null>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
 
   // Matrix animation background
@@ -234,6 +235,7 @@ export default function ProfilePage() {
 
   const saveProfile = async () => {
     setSavingProfile(true);
+    setProfileSaveMessage(null);
     try {
       const response = await fetch('/api/user/profile', {
         method: 'PUT',
@@ -252,10 +254,17 @@ export default function ProfilePage() {
       if (response.ok) {
         const data = await response.json();
         setUserData(data.user);
-        setShowEditProfile(false);
+        setProfileSaveMessage({ type: 'success', text: '✓ Profile updated successfully!' });
+        setTimeout(() => {
+          setShowEditProfile(false);
+          setProfileSaveMessage(null);
+        }, 1500);
+      } else {
+        setProfileSaveMessage({ type: 'error', text: 'Failed to save profile. Please try again.' });
       }
     } catch (error) {
       console.error('Error saving profile:', error);
+      setProfileSaveMessage({ type: 'error', text: 'Failed to save profile. Please try again.' });
     } finally {
       setSavingProfile(false);
     }
@@ -449,6 +458,16 @@ export default function ProfilePage() {
                   </div>
                 )}
 
+                {profileSaveMessage && (
+                  <div className={`p-3 rounded-lg text-center font-semibold ${
+                    profileSaveMessage.type === 'success' 
+                      ? 'bg-green-500/20 border border-green-500/50 text-green-400' 
+                      : 'bg-red-500/20 border border-red-500/50 text-red-400'
+                  }`}>
+                    {profileSaveMessage.text}
+                  </div>
+                )}
+
                 <div className="flex gap-3 pt-4">
                   <button
                     onClick={saveProfile}
@@ -458,7 +477,10 @@ export default function ProfilePage() {
                     {savingProfile ? 'Saving...' : 'Save Profile'}
                   </button>
                   <button
-                    onClick={() => setShowEditProfile(false)}
+                    onClick={() => {
+                      setShowEditProfile(false);
+                      setProfileSaveMessage(null);
+                    }}
                     className="px-6 py-3 border-2 border-[#f7931a]/50 text-[#f7931a] rounded-lg font-semibold hover:bg-[#f7931a]/10 transition-all"
                   >
                     Cancel

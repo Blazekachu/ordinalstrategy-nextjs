@@ -1,10 +1,14 @@
 'use client';
 
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { usePrivy } from '@privy-io/react-auth';
+import { useXverseWallet } from '@/components/XverseWalletProvider';
+import Link from 'next/link';
 
 export default function FoxJumpGame() {
   const { user, authenticated } = usePrivy();
+  const { connected, address } = useXverseWallet();
+  const [lastScoreSubmitted, setLastScoreSubmitted] = useState(false);
 
   useEffect(() => {
     // Listen for game score messages from iframe
@@ -13,7 +17,8 @@ export default function FoxJumpGame() {
       if (event.data.type === 'GAME_SCORE') {
         const { score, level, coins, playTime } = event.data;
         
-        if (authenticated && user?.id) {
+        // Use Xverse wallet address as the primary identifier
+        if (connected && address) {
           try {
             // Submit score to API
             const response = await fetch('/api/scores', {
@@ -22,7 +27,7 @@ export default function FoxJumpGame() {
                 'Content-Type': 'application/json',
               },
               body: JSON.stringify({
-                privyId: user.id,
+                privyId: address, // Use wallet address as privyId
                 gameName: 'foxjump',
                 score,
                 level,
@@ -33,20 +38,55 @@ export default function FoxJumpGame() {
 
             if (response.ok) {
               console.log('Score submitted successfully!');
+              setLastScoreSubmitted(true);
+              setTimeout(() => setLastScoreSubmitted(false), 3000);
             }
           } catch (error) {
             console.error('Error submitting score:', error);
           }
+        } else {
+          console.log('Wallet not connected - score not saved');
         }
       }
     };
 
     window.addEventListener('message', handleMessage);
     return () => window.removeEventListener('message', handleMessage);
-  }, [authenticated, user]);
+  }, [connected, address]);
 
   return (
     <div className="w-full h-screen bg-[#0b0c10] flex items-center justify-center relative overflow-hidden">
+      {/* Connection Status & Home Button */}
+      <div className="fixed top-4 right-4 z-30 flex items-center gap-3">
+        {/* Home Button */}
+        <Link href="/" className="bg-[#f7931a] hover:bg-[#ffd166] text-[#0b0c10] px-4 py-2 rounded-lg font-semibold transition-all flex items-center gap-2 shadow-lg">
+          🏠 Home
+        </Link>
+        
+        {/* Connection Status */}
+        <div className={`flex items-center gap-2 px-4 py-2 rounded-lg backdrop-blur-md border-2 shadow-lg ${
+          connected 
+            ? 'bg-green-500/20 border-green-500/50' 
+            : 'bg-red-500/20 border-red-500/50'
+        }`}>
+          <div className={`w-3 h-3 rounded-full animate-pulse ${
+            connected ? 'bg-green-500' : 'bg-red-500'
+          }`} />
+          <span className={`text-sm font-semibold ${
+            connected ? 'text-green-400' : 'text-red-400'
+          }`}>
+            {connected ? 'Recording' : 'Not Recording'}
+          </span>
+        </div>
+      </div>
+
+      {/* Score Submitted Notification */}
+      {lastScoreSubmitted && (
+        <div className="fixed top-20 right-4 z-30 bg-green-500/90 text-white px-4 py-3 rounded-lg shadow-xl animate-bounce">
+          ✓ Score Saved!
+        </div>
+      )}
+
       {/* Left Panel - Controls */}
       <div className="hidden lg:block absolute left-0 top-0 bottom-0 w-64 bg-gradient-to-r from-[#0b0c10] to-transparent z-10 p-6">
         <div className="bg-[#14161c]/90 backdrop-blur-lg border border-[#f7931a]/30 rounded-2xl p-6 h-full overflow-y-auto shadow-[0_0_30px_rgba(247,147,26,0.2)]">
