@@ -43,12 +43,19 @@ export default function ProfilePage() {
   const [scores, setScores] = useState<GameScore[]>([]);
   const [leaderboard, setLeaderboard] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState<'addresses' | 'games' | 'inscriptions'>('addresses');
+  const [activeTab, setActiveTab] = useState<'profile' | 'addresses' | 'games' | 'leaderboard' | 'inscriptions'>('profile');
   const [inscriptions, setInscriptions] = useState<any[]>([]);
   const [loadingInscriptions, setLoadingInscriptions] = useState(false);
   const [sparkAddressInput, setSparkAddressInput] = useState('');
   const [sparkBalance, setSparkBalance] = useState<{ btcSoftBalanceSats: number; btcHardBalanceSats: number; tokens: any[] } | null>(null);
   const [loadingSparkBalance, setLoadingSparkBalance] = useState(false);
+  const [leaderboardData, setLeaderboardData] = useState<any[]>([]);
+  const [leaderboardSort, setLeaderboardSort] = useState<'highScore' | 'gamesPlayed' | 'avgScore'>('highScore');
+  const [loadingLeaderboard, setLoadingLeaderboard] = useState(false);
+  const [showEditProfile, setShowEditProfile] = useState(false);
+  const [editUsername, setEditUsername] = useState('');
+  const [editProfilePic, setEditProfilePic] = useState('');
+  const [savingProfile, setSavingProfile] = useState(false);
   const canvasRef = useRef<HTMLCanvasElement>(null);
 
   // Matrix animation background
@@ -128,6 +135,12 @@ export default function ProfilePage() {
   }, [activeTab, ordinalsAddress]);
 
   useEffect(() => {
+    if (activeTab === 'leaderboard') {
+      fetchLeaderboardData(leaderboardSort);
+    }
+  }, [activeTab, leaderboardSort]);
+
+  useEffect(() => {
     // Load saved Spark address from localStorage
     const savedSparkAddress = localStorage.getItem('spark_address');
     if (savedSparkAddress) {
@@ -164,9 +177,13 @@ export default function ProfilePage() {
 
   const fetchUserData = async () => {
     try {
-      const response = await fetch(`/api/user?privyId=${user?.id}`);
+      const response = await fetch(`/api/user/profile?walletAddress=${address}`);
+      if (response.ok) {
       const data = await response.json();
       setUserData(data.user);
+        setEditUsername(data.user?.username || '');
+        setEditProfilePic(data.user?.profilePic || '');
+      }
     } catch (error) {
       console.error('Error fetching user data:', error);
     }
@@ -174,7 +191,7 @@ export default function ProfilePage() {
 
   const fetchUserScores = async () => {
     try {
-      const response = await fetch(`/api/scores?privyId=${user?.id}&type=user&limit=20`);
+      const response = await fetch(`/api/scores?walletAddress=${address}&type=user&limit=20`);
       const data = await response.json();
       setScores(data.scores || []);
       setLoading(false);
@@ -191,6 +208,48 @@ export default function ProfilePage() {
       setLeaderboard(data.scores || []);
     } catch (error) {
       console.error('Error fetching leaderboard:', error);
+    }
+  };
+
+  const fetchLeaderboardData = async (sortBy: 'highScore' | 'gamesPlayed' | 'avgScore' = 'highScore') => {
+    setLoadingLeaderboard(true);
+    try {
+      const response = await fetch(`/api/leaderboard?sortBy=${sortBy}&limit=100`);
+      const data = await response.json();
+      setLeaderboardData(data.leaderboard || []);
+    } catch (error) {
+      console.error('Error fetching leaderboard:', error);
+    } finally {
+      setLoadingLeaderboard(false);
+    }
+  };
+
+  const saveProfile = async () => {
+    setSavingProfile(true);
+    try {
+      const response = await fetch('/api/user/profile', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          walletAddress: address,
+          username: editUsername,
+          profilePic: editProfilePic,
+          nativeSegwitAddress: nativeSegwit?.address,
+          taprootAddress: taproot?.address,
+          sparkAddress: sparkAddressInput,
+          inscriptionCount: inscriptions.length,
+        }),
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        setUserData(data.user);
+        setShowEditProfile(false);
+      }
+    } catch (error) {
+      console.error('Error saving profile:', error);
+    } finally {
+      setSavingProfile(false);
     }
   };
 
@@ -293,11 +352,17 @@ export default function ProfilePage() {
             
             <div className="flex-1 text-center md:text-left">
               <div className="flex flex-col items-center md:items-start gap-2 mb-3">
-                <div className="flex items-center gap-2">
-                  <h1 className="text-2xl md:text-3xl font-bold text-[#f7931a] drop-shadow-[0_0_20px_rgba(247,147,26,0.5)] break-all">
-                    {address && `${address.slice(0, 8)}...${address.slice(-8)}`}
+                <div className="flex items-center gap-2 flex-wrap">
+                  <h1 className="text-2xl md:text-3xl font-bold text-[#f7931a] drop-shadow-[0_0_20px_rgba(247,147,26,0.5)]">
+                    {userData?.username || (address && `${address.slice(0, 8)}...${address.slice(-8)}`)}
               </h1>
                   <span className="text-2xl">🎮</span>
+                  <button
+                    onClick={() => setShowEditProfile(true)}
+                    className="bg-[#f7931a]/20 hover:bg-[#f7931a]/40 border border-[#f7931a]/50 px-3 py-1 rounded-lg text-xs font-semibold transition-all"
+                  >
+                    ✏️ Edit
+                  </button>
                 </div>
                 {balance !== null && (
                   <div className="bg-black/60 px-4 py-2 rounded-lg border border-[#f7931a]/30">
@@ -305,25 +370,104 @@ export default function ProfilePage() {
                   </div>
                 )}
               </div>
-              <div className="flex flex-wrap justify-center md:justify-start gap-4 md:gap-8 text-gray-300">
+              <div className="flex flex-wrap justify-center md:justify-start gap-3 md:gap-4 text-gray-300">
                 <div className="bg-black/40 px-4 py-2 rounded-xl border border-[#f7931a]/20 hover:border-[#f7931a]/50 transition-colors">
-                  <span className="text-[#ffd166] font-bold text-xl md:text-3xl block">{userData?.gamesPlayed || 0}</span>
-                  <span className="text-xs md:text-sm opacity-80">Games Played</span>
+                  <span className="text-[#ffd166] font-bold text-xl md:text-2xl block">{userData?.gamesPlayed || 0}</span>
+                  <span className="text-xs opacity-80">Games</span>
                 </div>
                 <div className="bg-black/40 px-4 py-2 rounded-xl border border-[#f7931a]/20 hover:border-[#f7931a]/50 transition-colors">
-                  <span className="text-[#ffd166] font-bold text-xl md:text-3xl block">{userData?.totalScore?.toLocaleString() || 0}</span>
-                  <span className="text-xs md:text-sm opacity-80">Total Score</span>
+                  <span className="text-[#ffd166] font-bold text-xl md:text-2xl block">{userData?.totalScore?.toLocaleString() || 0}</span>
+                  <span className="text-xs opacity-80">Total Score</span>
+                </div>
+                <div className="bg-black/40 px-4 py-2 rounded-xl border border-[#f7931a]/20 hover:border-[#f7931a]/50 transition-colors">
+                  <span className="text-[#ffd166] font-bold text-xl md:text-2xl block">{userData?.highScore?.toLocaleString() || 0}</span>
+                  <span className="text-xs opacity-80">High Score</span>
+                </div>
+                <div className="bg-black/40 px-4 py-2 rounded-xl border border-[#f7931a]/20 hover:border-[#f7931a]/50 transition-colors">
+                  <span className="text-[#ffd166] font-bold text-xl md:text-2xl block">{inscriptions.length || userData?.inscriptionCount || 0}</span>
+                  <span className="text-xs opacity-80">Inscriptions</span>
                 </div>
               </div>
             </div>
           </div>
         </div>
 
+        {/* Edit Profile Modal */}
+        {showEditProfile && (
+          <div className="fixed inset-0 z-[10001] flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
+            <div className="relative max-w-[500px] w-full bg-[#1b1c1f] border-2 border-[#f7931a]/50 rounded-2xl shadow-2xl p-6">
+              <button
+                onClick={() => setShowEditProfile(false)}
+                className="absolute top-4 right-4 text-2xl text-gray-400 hover:text-[#f7931a]"
+              >
+                &times;
+              </button>
+              <h2 className="text-2xl font-bold text-[#f7931a] mb-6">Edit Profile</h2>
+              
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm text-gray-400 mb-2">Username</label>
+                  <input
+                    type="text"
+                    value={editUsername}
+                    onChange={(e) => setEditUsername(e.target.value)}
+                    placeholder="Enter your username"
+                    className="w-full bg-black/50 border border-[#f7931a]/30 rounded-lg px-4 py-3 text-white focus:outline-none focus:border-[#f7931a]"
+                  />
+                </div>
+                
+                <div>
+                  <label className="block text-sm text-gray-400 mb-2">Profile Picture URL</label>
+                  <input
+                    type="text"
+                    value={editProfilePic}
+                    onChange={(e) => setEditProfilePic(e.target.value)}
+                    placeholder="https://example.com/your-image.jpg"
+                    className="w-full bg-black/50 border border-[#f7931a]/30 rounded-lg px-4 py-3 text-white focus:outline-none focus:border-[#f7931a]"
+                  />
+                  <p className="text-xs text-gray-500 mt-1">Paste an image URL for your profile picture</p>
+                </div>
+
+                {editProfilePic && (
+                  <div className="flex justify-center">
+                    <img 
+                      src={editProfilePic} 
+                      alt="Preview" 
+                      className="w-24 h-24 rounded-full object-cover border-2 border-[#f7931a]/50"
+                      onError={(e) => {
+                        (e.target as HTMLImageElement).style.display = 'none';
+                      }}
+                    />
+                  </div>
+                )}
+
+                <div className="flex gap-3 pt-4">
+                  <button
+                    onClick={saveProfile}
+                    disabled={savingProfile}
+                    className="flex-1 bg-[#f7931a] text-[#0b0c10] px-6 py-3 rounded-lg font-semibold hover:bg-[#ffd166] transition-all disabled:opacity-50"
+                  >
+                    {savingProfile ? 'Saving...' : 'Save Profile'}
+                  </button>
+                  <button
+                    onClick={() => setShowEditProfile(false)}
+                    className="px-6 py-3 border-2 border-[#f7931a]/50 text-[#f7931a] rounded-lg font-semibold hover:bg-[#f7931a]/10 transition-all"
+                  >
+                    Cancel
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Tabs */}
-        <div className="flex gap-4 mb-8 border-b border-gray-700">
+        <div className="flex gap-2 md:gap-4 mb-8 border-b border-gray-700 overflow-x-auto">
               {[
-                { key: 'addresses', label: 'Addresses & Sats' },
+                { key: 'profile', label: 'Profile' },
+                { key: 'addresses', label: 'Addresses' },
                 { key: 'games', label: 'Games' },
+                { key: 'leaderboard', label: 'Leaderboard' },
                 { key: 'inscriptions', label: 'Inscriptions' }
               ].map((tab) => (
             <button
@@ -347,6 +491,133 @@ export default function ProfilePage() {
           </div>
         ) : (
           <>
+            {/* Profile Tab */}
+            {activeTab === 'profile' && (
+              <div className="space-y-6">
+                <div className="bg-gradient-to-br from-[#111317]/90 to-[#1b1c1f]/90 backdrop-blur-sm p-6 md:p-8 rounded-2xl border-2 border-[#f7931a]/20">
+                  <h3 className="text-2xl font-bold text-[#f7931a] mb-6">Profile Information</h3>
+                  
+                  <div className="space-y-4">
+                    <div className="flex items-center justify-between py-3 border-b border-gray-700">
+                      <span className="text-gray-400">Username</span>
+                      <span className="text-white font-semibold">{userData?.username || 'Not set'}</span>
+                    </div>
+                    <div className="flex items-center justify-between py-3 border-b border-gray-700">
+                      <span className="text-gray-400">Wallet Address</span>
+                      <span className="text-white font-mono text-sm">{address && `${address.slice(0, 10)}...${address.slice(-10)}`}</span>
+                    </div>
+                    <div className="flex items-center justify-between py-3 border-b border-gray-700">
+                      <span className="text-gray-400">Games Played</span>
+                      <span className="text-[#ffd166] font-bold text-xl">{userData?.gamesPlayed || 0}</span>
+                    </div>
+                    <div className="flex items-center justify-between py-3 border-b border-gray-700">
+                      <span className="text-gray-400">High Score</span>
+                      <span className="text-[#ffd166] font-bold text-xl">{userData?.highScore?.toLocaleString() || 0}</span>
+                    </div>
+                    <div className="flex items-center justify-between py-3 border-b border-gray-700">
+                      <span className="text-gray-400">Total Score</span>
+                      <span className="text-[#ffd166] font-bold text-xl">{userData?.totalScore?.toLocaleString() || 0}</span>
+                    </div>
+                    <div className="flex items-center justify-between py-3 border-b border-gray-700">
+                      <span className="text-gray-400">Average Score</span>
+                      <span className="text-[#ffd166] font-bold text-xl">
+                        {userData?.gamesPlayed && userData?.gamesPlayed > 0 
+                          ? Math.round(userData.totalScore / userData.gamesPlayed).toLocaleString()
+                          : 0}
+                      </span>
+                    </div>
+                    <div className="flex items-center justify-between py-3">
+                      <span className="text-gray-400">Inscriptions</span>
+                      <span className="text-[#ffd166] font-bold text-xl">{inscriptions.length || userData?.inscriptionCount || 0}</span>
+                    </div>
+                  </div>
+
+                  <button
+                    onClick={() => setShowEditProfile(true)}
+                    className="w-full mt-6 bg-[#f7931a] text-[#0b0c10] px-6 py-3 rounded-lg font-semibold hover:bg-[#ffd166] transition-all"
+                  >
+                    Edit Profile
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {/* Leaderboard Tab */}
+            {activeTab === 'leaderboard' && (
+              <div className="space-y-6">
+                <div className="bg-gradient-to-br from-[#111317]/90 to-[#1b1c1f]/90 backdrop-blur-sm rounded-2xl border-2 border-[#f7931a]/20 overflow-hidden">
+                  <div className="bg-[#1b1c1f] px-6 py-4 border-b border-gray-700 flex flex-wrap items-center justify-between gap-4">
+                    <h3 className="text-xl font-bold text-[#f7931a]">Global Leaderboard</h3>
+                    <div className="flex gap-2">
+                      {['highScore', 'gamesPlayed', 'avgScore'].map((sortType) => (
+                        <button
+                          key={sortType}
+                          onClick={() => setLeaderboardSort(sortType as any)}
+                          className={`px-3 py-1 rounded text-xs font-semibold transition-all ${
+                            leaderboardSort === sortType
+                              ? 'bg-[#f7931a] text-[#0b0c10]'
+                              : 'bg-black/40 text-gray-400 hover:text-white'
+                          }`}
+                        >
+                          {sortType === 'highScore' ? 'High Score' : sortType === 'gamesPlayed' ? 'Games' : 'Avg Score'}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  {loadingLeaderboard ? (
+                    <div className="text-center py-12">
+                      <div className="inline-block w-8 h-8 border-4 border-[#f7931a] border-t-transparent rounded-full animate-spin" />
+                    </div>
+                  ) : (
+                    <div className="overflow-x-auto">
+                      <table className="w-full">
+                        <thead className="bg-[#1b1c1f]/50">
+                          <tr>
+                            <th className="px-4 py-3 text-left text-[#f7931a] font-semibold text-sm">Rank</th>
+                            <th className="px-4 py-3 text-left text-[#f7931a] font-semibold text-sm">Player</th>
+                            <th className="px-4 py-3 text-center text-[#f7931a] font-semibold text-sm">Games</th>
+                            <th className="px-4 py-3 text-center text-[#f7931a] font-semibold text-sm">High Score</th>
+                            <th className="px-4 py-3 text-center text-[#f7931a] font-semibold text-sm">Avg Score</th>
+                            <th className="px-4 py-3 text-center text-[#f7931a] font-semibold text-sm">Inscriptions</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {leaderboardData.slice(0, 50).map((player, index) => {
+                            const isCurrentUser = player.walletAddress === address;
+                            return (
+                              <tr 
+                                key={player.walletAddress}
+                                className={`border-t border-gray-700 hover:bg-[#1b1c1f]/30 transition-colors ${
+                                  isCurrentUser ? 'bg-[#f7931a]/10' : ''
+                                }`}
+                              >
+                                <td className="px-4 py-3">
+                                  <span className={`font-bold ${index < 3 ? 'text-[#ffd166]' : 'text-gray-400'}`}>
+                                    {index === 0 ? '🥇' : index === 1 ? '🥈' : index === 2 ? '🥉' : `#${index + 1}`}
+                                  </span>
+                                </td>
+                                <td className="px-4 py-3">
+                                  <div className="flex items-center gap-2">
+                                    {isCurrentUser && <span className="text-[#f7931a]">👤</span>}
+                                    <span className="text-white font-semibold">{player.displayName}</span>
+                                  </div>
+                                </td>
+                                <td className="px-4 py-3 text-center text-gray-300">{player.gamesPlayed}</td>
+                                <td className="px-4 py-3 text-center text-[#ffd166] font-bold">{player.highScore?.toLocaleString()}</td>
+                                <td className="px-4 py-3 text-center text-gray-300">{player.avgScore?.toLocaleString()}</td>
+                                <td className="px-4 py-3 text-center text-gray-300">{player.inscriptionCount || 0}</td>
+                              </tr>
+                            );
+                          })}
+                        </tbody>
+                      </table>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+
             {/* Addresses & Sats Tab */}
             {activeTab === 'addresses' && (
               <div className="space-y-6">
@@ -525,37 +796,85 @@ export default function ProfilePage() {
                     <div className="relative">
                       <div className="text-[#f7931a] text-xs md:text-sm mb-2 uppercase tracking-wider font-semibold">Total Play Time</div>
                       <div className="text-3xl md:text-4xl font-bold text-white">
-                        {formatTime(scores.reduce((sum, s) => sum + (s.playTime || 0), 0))}
+                    {formatTime(scores.reduce((sum, s) => sum + (s.playTime || 0), 0))}
                       </div>
                     </div>
                   </div>
                 </div>
 
-                {/* Game History Table */}
+                {/* Recent Games - Last 5 */}
+                {scores.length > 0 && (
+                  <div className="bg-gradient-to-br from-[#111317]/90 to-[#1b1c1f]/90 backdrop-blur-sm rounded-2xl border-2 border-[#f7931a]/30 overflow-hidden">
+                    <div className="bg-[#1b1c1f] px-6 py-4 border-b border-[#f7931a]/30">
+                      <h3 className="text-xl font-bold text-[#f7931a] flex items-center gap-2">
+                        🎯 Recent Games (Last 5)
+                      </h3>
+                    </div>
+                    <div className="p-4 space-y-3">
+                      {scores.slice(0, 5).map((score, index) => (
+                        <div 
+                          key={score._id}
+                          className="bg-black/40 rounded-xl p-4 border-2 border-[#f7931a]/20 hover:border-[#f7931a]/50 transition-all"
+                        >
+                          <div className="flex flex-wrap items-center justify-between gap-4">
+                            <div className="flex items-center gap-3">
+                              <div className="text-2xl">{index === 0 ? '🔥' : '🎮'}</div>
+                              <div>
+                                <div className="text-sm text-gray-400">{formatDate(score.createdAt)}</div>
+                                <div className="text-2xl font-bold text-[#ffd166]">{score.score.toLocaleString()}</div>
+                              </div>
+                            </div>
+                            <div className="flex gap-4 text-sm">
+                              <div className="text-center">
+                                <div className="text-gray-400 text-xs">Level</div>
+                                <div className="text-white font-bold">{score.level}</div>
+                              </div>
+                              <div className="text-center">
+                                <div className="text-gray-400 text-xs">Coins</div>
+                                <div className="text-yellow-400 font-bold">{score.coinsCollected}</div>
+                              </div>
+                              <div className="text-center">
+                                <div className="text-gray-400 text-xs">Time</div>
+                                <div className="text-white font-bold">{formatTime(score.playTime)}</div>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Full Game History Table */}
                 <div className="bg-[#111317]/90 backdrop-blur-sm rounded-2xl overflow-hidden border-2 border-[#f7931a]/20 shadow-lg">
                   <div className="bg-[#1b1c1f] px-6 py-4 border-b border-gray-700">
-                    <h3 className="text-xl font-bold text-[#f7931a]">Game History</h3>
+                    <h3 className="text-xl font-bold text-[#f7931a]">All Game History</h3>
                   </div>
                   <div className="overflow-x-auto">
                 <table className="w-full">
                       <thead className="bg-[#1b1c1f]/50">
                     <tr>
-                      <th className="px-6 py-4 text-left text-[#f7931a] font-semibold">Date</th>
-                      <th className="px-6 py-4 text-left text-[#f7931a] font-semibold">Score</th>
-                      <th className="px-6 py-4 text-left text-[#f7931a] font-semibold">Level</th>
-                      <th className="px-6 py-4 text-left text-[#f7931a] font-semibold">Coins</th>
-                      <th className="px-6 py-4 text-left text-[#f7931a] font-semibold">Play Time</th>
+                      <th className="px-4 md:px-6 py-4 text-left text-[#f7931a] font-semibold text-sm">Date</th>
+                      <th className="px-4 md:px-6 py-4 text-left text-[#f7931a] font-semibold text-sm">Score</th>
+                      <th className="px-4 md:px-6 py-4 text-left text-[#f7931a] font-semibold text-sm">Level</th>
+                      <th className="px-4 md:px-6 py-4 text-left text-[#f7931a] font-semibold text-sm">Coins</th>
+                      <th className="px-4 md:px-6 py-4 text-left text-[#f7931a] font-semibold text-sm">Time</th>
                     </tr>
                   </thead>
                   <tbody>
                     {scores.length > 0 ? (
-                      scores.map((score) => (
-                            <tr key={score._id} className="border-t border-gray-700 hover:bg-[#1b1c1f]/30 transition-colors">
-                          <td className="px-6 py-4 text-gray-300">{formatDate(score.createdAt)}</td>
-                          <td className="px-6 py-4 text-white font-bold">{score.score.toLocaleString()}</td>
-                          <td className="px-6 py-4 text-gray-300">{score.level}</td>
-                          <td className="px-6 py-4 text-yellow-400">{score.coinsCollected}</td>
-                          <td className="px-6 py-4 text-gray-300">{formatTime(score.playTime)}</td>
+                      scores.map((score, index) => (
+                            <tr 
+                              key={score._id} 
+                              className={`border-t border-gray-700 hover:bg-[#1b1c1f]/30 transition-colors ${
+                                index < 5 ? 'bg-[#f7931a]/5' : ''
+                              }`}
+                            >
+                          <td className="px-4 md:px-6 py-4 text-gray-300 text-sm">{formatDate(score.createdAt)}</td>
+                          <td className="px-4 md:px-6 py-4 text-white font-bold">{score.score.toLocaleString()}</td>
+                          <td className="px-4 md:px-6 py-4 text-gray-300">{score.level}</td>
+                          <td className="px-4 md:px-6 py-4 text-yellow-400">{score.coinsCollected}</td>
+                          <td className="px-4 md:px-6 py-4 text-gray-300 text-sm">{formatTime(score.playTime)}</td>
                         </tr>
                       ))
                     ) : (
