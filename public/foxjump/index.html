@@ -111,7 +111,7 @@
   const pal = { plat:'#2b3353', move:'#35406a', brk:'#6b3f2a', drop:'#5a3423', tramp:'#2aa36b', coin:'#ffb04a', coin2:'#ffd68a', boost:'#ff8a1f', boost2:'#ffb24f', enemy:'#e2664a', enemy2:'#ffac92' };
 
   // === World ===
-  const world = { camY:0, score:0, best:Number(localStorage.getItem('ordinal-fox-best')||0), started:false, gameOver:false };
+  const world = { camY:0, score:0, best:Number(localStorage.getItem('ordinal-fox-best')||0), started:false, gameOver:false, startTime:0 };
   bestEl.textContent = 'Best: ' + world.best;
   const GRAV=0.28, MOVE=4.1, WRAP=40, BOUNCE=-11.5, BOUNCE_TRAMP=-17.0, BOOST_VY=-20.0;
   let boostTimer = 0;
@@ -140,9 +140,9 @@
 
   // Input
   let leftHeld=false,rightHeld=false;
-  const key = e => { if (e.code==='ArrowLeft'||e.code==='KeyA') leftHeld = e.type==='keydown'; if (e.code==='ArrowRight'||e.code==='KeyD') rightHeld = e.type==='keydown'; if(!world.started){world.started=true; toast.style.display='none';}};
+  const key = e => { if (e.code==='ArrowLeft'||e.code==='KeyA') leftHeld = e.type==='keydown'; if (e.code==='ArrowRight'||e.code==='KeyD') rightHeld = e.type==='keydown'; if(!world.started){world.started=true; world.startTime=Date.now(); toast.style.display='none';}};
   addEventListener('keydown', key); addEventListener('keyup', key);
-  function press(el, setter){ el.addEventListener('pointerdown',()=>{setter(true); world.started=true; toast.style.display='none';}); el.addEventListener('pointerup',()=>setter(false)); el.addEventListener('pointerleave',()=>setter(false)); }
+  function press(el, setter){ el.addEventListener('pointerdown',()=>{setter(true); if(!world.started){world.started=true; world.startTime=Date.now();} toast.style.display='none';}); el.addEventListener('pointerup',()=>setter(false)); el.addEventListener('pointerleave',()=>setter(false)); }
   press(document.getElementById('left'), v=>leftHeld=v); press(document.getElementById('right'), v=>rightHeld=v);
 
   // Helpers
@@ -255,12 +255,14 @@
       
       // Send score to parent window for Next.js integration
       if (window.parent !== window) {
+        // Calculate actual play time in seconds
+        const elapsedSeconds = world.startTime > 0 ? Math.floor((Date.now() - world.startTime) / 1000) : 0;
         window.parent.postMessage({
           type: 'GAME_SCORE',
           score: world.score,
           level: Math.floor(world.score / 1000),
           coins: coins.filter(c => c.taken).length,
-          playTime: Math.floor(Date.now() / 1000)
+          playTime: elapsedSeconds
         }, '*');
       }
       
@@ -272,7 +274,7 @@
 
   function reset(){
     world.best = Number(localStorage.getItem('ordinal-fox-best')||world.best);
-    world.camY=0; world.score=0; world.gameOver=false; world.started=false;
+    world.camY=0; world.score=0; world.gameOver=false; world.started=false; world.startTime=0;
     toast.style.display='';
     player.x = W/2 - SPRITE_W/2; player.y = H - 140; player.vx=0; player.vy=0; player.facing=1; player.animTimer=0;
     boostTimer = 0; enemies.length=0; enemyCooldown=180;
