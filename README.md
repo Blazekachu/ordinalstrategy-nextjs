@@ -1,325 +1,171 @@
-# Ordinal Strategy - Next.js Application
+# Ordinal Strategy 🎮
 
-A modern, feature-rich Next.js application for the Ordinal Strategy platform, complete with user authentication, game score tracking, and a comprehensive profile system.
+A Next.js web application for Bitcoin Ordinals gaming and strategy, featuring wallet integration, game score tracking, and user profiles.
+
+**Live Site:** [ordinalstrategy-nextjs-c4rb.vercel.app](https://ordinalstrategy-nextjs-c4rb.vercel.app)
+
+---
 
 ## 🚀 Features
 
-- ✅ **Next.js 15** with App Router
-- ✅ **TypeScript** for type safety
-- ✅ **Tailwind CSS** for styling
-- ✅ **Privy Authentication** (Twitter & Wallet login)
-- ✅ **MongoDB Database** for user data and game scores
-- ✅ **API Routes** for backend functionality
-- ✅ **Profile System** with game statistics and leaderboards
-- ✅ **Matrix-style animations** on landing and strategy pages
-- ✅ **Real-time Bitcoin data** (price, mempool, ordinals)
-- ✅ **FoxJump game integration** with score tracking
+- **Xverse Wallet Integration** - Connect with Bitcoin addresses (SegWit, Taproot, Spark)
+- **FoxJump Game** - Play and track your scores on the blockchain
+- **User Profiles** - View stats, game history, and leaderboards
+- **Supabase Backend** - Fast, scalable PostgreSQL database
+- **Real-time Data** - Live Bitcoin prices and mempool stats
+- **Responsive Design** - Works on desktop and mobile
+
+---
+
+## 🛠️ Tech Stack
+
+- **Framework:** Next.js 15.5.6 with Turbopack
+- **Language:** TypeScript
+- **Styling:** Tailwind CSS
+- **Database:** Supabase (PostgreSQL)
+- **Wallet:** Xverse (via sats-connect)
+- **Deployment:** Vercel
+
+---
 
 ## 📁 Project Structure
 
 ```
 ordinalstrategy-nextjs/
 ├── app/
-│   ├── api/
-│   │   ├── scores/          # Game score API endpoints
-│   │   └── user/            # User profile API endpoints
-│   ├── foxjump/             # FoxJump game page
-│   ├── profile/             # User profile page
-│   ├── strategy/            # Strategy page
-│   ├── layout.tsx           # Root layout with Privy provider
-│   └── page.tsx             # Home page
-├── components/
-│   └── PrivyProvider.tsx    # Privy authentication wrapper
-├── lib/
-│   └── mongodb.ts           # MongoDB connection utility
-├── models/
-│   ├── User.ts              # User model schema
-│   └── GameScore.ts         # Game score model schema
-├── public/
-│   ├── foxjump/             # FoxJump game assets
-│   ├── osfun.png            # Logo
-│   ├── osmascot.png         # Mascot image
-│   └── rocket.png           # Rocket icon
-└── .env.local               # Environment variables (gitignored)
+│   ├── api/              # API routes
+│   ├── foxjump/          # Game page
+│   ├── profile/          # User profile
+│   ├── strategy/         # Strategy info page
+│   └── page.tsx          # Home page
+├── components/           # React components
+├── lib/                  # Utilities (Supabase)
+├── public/foxjump/       # Game assets
+└── .env.local            # Environment variables
 ```
 
-## 🛠️ Setup Instructions
+---
 
-### 1. Install Dependencies
+## ⚙️ Setup
+
+### 1. Clone the repository
 
 ```bash
+git clone https://github.com/Blazekachu/ordinalstrategy-nextjs.git
 cd ordinalstrategy-nextjs
+```
+
+### 2. Install dependencies
+
+```bash
 npm install
 ```
 
-### 2. Set Up Environment Variables
+### 3. Set up environment variables
 
-The `.env.local` file has been created with the following variables. **You need to update these with your actual values:**
+Create a `.env.local` file:
 
-```bash
-# Privy Configuration
-NEXT_PUBLIC_PRIVY_APP_ID=your_privy_app_id_here
-PRIVY_APP_SECRET=your_privy_app_secret_here
+```env
+# Supabase
+SUPABASE_URL=your_supabase_url
+SUPABASE_ANON_KEY=your_supabase_anon_key
+SUPABASE_SERVICE_KEY=your_supabase_service_key
 
-# MongoDB Configuration
-MONGODB_URI=mongodb://localhost:27017/ordinalstrategy
-# Or use MongoDB Atlas: mongodb+srv://<username>:<password>@<cluster>.mongodb.net/ordinalstrategy
-
-# API Keys
-ORDISCAN_API_KEY=***REMOVED***
-
-# App Configuration
-NEXT_PUBLIC_SITE_URL=http://localhost:3000
+# Optional: Privy (if using)
+NEXT_PUBLIC_PRIVY_APP_ID=your_privy_app_id
 ```
 
-#### Getting Privy API Keys:
-1. Go to [Privy Dashboard](https://dashboard.privy.io/)
-2. Create a new app or select existing one
-3. Copy your App ID and App Secret
-4. Update the `.env.local` file
+### 4. Set up Supabase Database
 
-#### Setting Up MongoDB:
+Run the SQL schema in your Supabase SQL Editor:
 
-**Option 1: Local MongoDB**
 ```bash
-# Install MongoDB locally
-brew install mongodb-community  # macOS
-# or
-sudo apt-get install mongodb    # Linux
-
-# Start MongoDB
-brew services start mongodb-community  # macOS
-# or
-sudo systemctl start mongodb    # Linux
+# See supabase_schema.sql for the full schema
 ```
 
-**Option 2: MongoDB Atlas (Recommended)**
-1. Go to [MongoDB Atlas](https://www.mongodb.com/cloud/atlas)
-2. Create a free cluster
-3. Get your connection string
-4. Update `MONGODB_URI` in `.env.local`
-
-### 3. Run the Development Server
+### 5. Run the development server
 
 ```bash
 npm run dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) to see your application.
+Open [http://localhost:3000](http://localhost:3000) in your browser.
 
-### 4. Build for Production
+---
 
-```bash
-npm run build
-npm start
-```
+## 🎮 How It Works
 
-## 📖 API Documentation
+1. **Connect Wallet** - Click "Join" and connect your Xverse wallet
+2. **Play Games** - Navigate to FoxJump and start playing
+3. **Track Progress** - View your scores, stats, and rank on your profile
+4. **Compete** - Climb the leaderboard!
 
-### User API (`/api/user`)
+---
 
-**GET** - Fetch user profile
-```bash
-GET /api/user?privyId=USER_ID
-```
+## 📊 Database Schema
 
-**POST** - Create/Update user profile
-```bash
-POST /api/user
-Body: {
-  "privyId": "string",
-  "twitterHandle": "string",
-  "twitterId": "string",
-  "walletAddress": "string"
-}
-```
+### Users Table
+- User profiles with wallet addresses
+- Game statistics (total score, games played, high score)
+- Bitcoin addresses (SegWit, Taproot, Spark)
 
-### Scores API (`/api/scores`)
+### Game Scores Table
+- Individual game records
+- Score, level, coins, play time
+- Linked to user profiles
 
-**GET** - Fetch scores
-```bash
-# Get leaderboard
-GET /api/scores?type=leaderboard&limit=10
+---
 
-# Get user scores
-GET /api/scores?privyId=USER_ID&type=user&limit=20
-```
+## 🚢 Deployment
 
-**POST** - Submit game score
-```bash
-POST /api/scores
-Body: {
-  "privyId": "string",
-  "gameName": "foxjump",
-  "score": number,
-  "level": number,
-  "coinsCollected": number,
-  "playTime": number
-}
-```
+### Deploy to Vercel
 
-## 🎮 Game Score Integration
-
-To integrate score tracking in the FoxJump game, add this code when the game ends:
-
-```javascript
-// In foxjump/index.html
-function submitScore(score, level, coins, playTime) {
-  // Send message to parent window
-  window.parent.postMessage({
-    type: 'GAME_SCORE',
-    score: score,
-    level: level,
-    coins: coins,
-    playTime: playTime
-  }, '*');
-}
-
-// Call this when game ends
-// submitScore(finalScore, currentLevel, coinsCollected, playTimeInSeconds);
-```
-
-## 🔐 Authentication Flow
-
-1. User clicks "count me in" on home page
-2. Privy modal appears for Twitter/Wallet login
-3. User authenticates
-4. Redirected to `/profile` page
-5. User profile is created in database
-6. User can play games and track scores
-
-## 📊 Database Models
-
-### User Model
-```typescript
-{
-  privyId: string;        // Unique Privy user ID
-  twitterHandle?: string; // Twitter username
-  twitterId?: string;     // Twitter ID
-  walletAddress?: string; // Crypto wallet address
-  totalScore: number;     // Cumulative score across all games
-  gamesPlayed: number;    // Total games played
-  createdAt: Date;
-  updatedAt: Date;
-}
-```
-
-### GameScore Model
-```typescript
-{
-  userId: ObjectId;       // Reference to User
-  gameName: string;       // 'foxjump'
-  score: number;          // Game score
-  level: number;          // Level reached
-  coinsCollected: number; // Coins collected
-  playTime: number;       // Time played in seconds
-  createdAt: Date;
-}
-```
-
-## 🎨 Pages
-
-### Home Page (`/`)
-- Matrix-style landing gate
-- Live Bitcoin data (price, mempool, ordinals)
-- Hero section with call-to-actions
-- About, Mechanics, and Community sections
-- Mascot with "up only" linking to game
-
-### Strategy Page (`/strategy`)
-- Matrix background with custom characters (*, +, -, /, #, @)
-- Protocol mechanics explanation
-- How it works section
-- Community join CTA
-
-### Profile Page (`/profile`)
-- User statistics
-- Game history table
-- Leaderboard
-- Play game CTA
-- Protected route (requires authentication)
-
-### FoxJump Game (`/foxjump`)
-- Embedded game iframe
-- Automatic score tracking
-- Syncs with user profile
-
-## 🚀 Deployment
-
-### Deploy to Vercel (Recommended)
-
-1. Push your code to GitHub
-2. Import project to Vercel
-3. Add environment variables in Vercel dashboard
+1. Push to GitHub
+2. Import project to [Vercel](https://vercel.com)
+3. Add environment variables
 4. Deploy!
 
+Or use the Vercel CLI:
+
 ```bash
-# Or use Vercel CLI
 npm install -g vercel
 vercel
 ```
 
-### Environment Variables for Production
-Make sure to add all environment variables from `.env.local` to your deployment platform.
+---
 
-## 🔧 Development Tips
+## 📝 API Routes
 
-### Testing Database Connection
-```bash
-# In a separate terminal
-node -e "require('./lib/mongodb.ts').default().then(() => console.log('Connected!'))"
-```
+### `/api/user/profile`
+- `GET` - Fetch user profile by wallet address
+- `PUT` - Update user profile
 
-### Viewing Database
-- Use MongoDB Compass for local database
-- Use MongoDB Atlas dashboard for cloud database
+### `/api/scores`
+- `GET` - Fetch game scores (user or leaderboard)
+- `POST` - Submit new game score
 
-### Hot Reload
-- Pages auto-reload on save
-- API routes require manual refresh sometimes
-
-## 📝 TODO / Future Enhancements
-
-- [ ] Add more games
-- [ ] Implement token rewards for high scores
-- [ ] Add social sharing for achievements
-- [ ] Create admin dashboard
-- [ ] Add real-time multiplayer features
-- [ ] Implement NFT minting for achievements
-
-## 🐛 Troubleshooting
-
-### MongoDB Connection Issues
-```bash
-# Check if MongoDB is running
-brew services list | grep mongodb  # macOS
-systemctl status mongodb           # Linux
-
-# Verify connection string
-echo $MONGODB_URI
-```
-
-### Privy Issues
-- Make sure your App ID and Secret are correct
-- Check that your domain is whitelisted in Privy dashboard
-- Verify environment variables are loaded
-
-### Build Errors
-```bash
-# Clear cache and reinstall
-rm -rf .next node_modules
-npm install
-npm run dev
-```
-
-## 📄 License
-
-MIT
-
-## 👨‍💻 Author
-
-Ordinal Strategy Team
+### `/api/leaderboard`
+- `GET` - Fetch global leaderboard
 
 ---
 
-**Happy coding! 🚀**
+## 🤝 Contributing
+
+Contributions are welcome! Please feel free to submit a Pull Request.
+
+---
+
+## 📄 License
+
+MIT License - feel free to use this project for your own purposes.
+
+---
+
+## 🔗 Links
+
+- **Live Site:** [ordinalstrategy-nextjs-c4rb.vercel.app](https://ordinalstrategy-nextjs-c4rb.vercel.app)
+- **GitHub:** [Blazekachu/ordinalstrategy-nextjs](https://github.com/Blazekachu/ordinalstrategy-nextjs)
+
+---
+
+**Built with ❤️ for the Bitcoin Ordinals community**
