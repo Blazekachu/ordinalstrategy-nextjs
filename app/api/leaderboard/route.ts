@@ -21,14 +21,22 @@ export async function GET(request: NextRequest) {
       });
     }
 
-    // Calculate average scores and add rankings
+    // Calculate average scores and add rankings - Transform to camelCase
     const leaderboardData = users.map((user: any) => {
       const avgScore = user.games_played > 0 
         ? Math.round(user.total_score / user.games_played) 
         : 0;
 
       return {
-        ...user,
+        username: user.username,
+        profilePic: user.profile_pic,
+        walletAddress: user.wallet_address,
+        nativeSegwitAddress: user.native_segwit_address,
+        taprootAddress: user.taproot_address,
+        totalScore: user.total_score,
+        gamesPlayed: user.games_played,
+        highScore: user.high_score,
+        inscriptionCount: user.inscription_count,
         avgScore,
         displayName: user.username || `${user.wallet_address?.slice(0, 6)}...${user.wallet_address?.slice(-4)}`,
       };
@@ -38,20 +46,20 @@ export async function GET(request: NextRequest) {
     leaderboardData.sort((a: any, b: any) => {
       switch (sortBy) {
         case 'gamesPlayed':
-          return b.games_played - a.games_played;
+          return b.gamesPlayed - a.gamesPlayed;
         case 'avgScore':
           return b.avgScore - a.avgScore;
         case 'highScore':
         default:
-          return b.high_score - a.high_score;
+          return b.highScore - a.highScore;
       }
     });
 
     // Add ranks after sorting
     leaderboardData.forEach((user: any, index: number) => {
       // Calculate ranks for each category
-      const highScoreRank = leaderboardData.filter((u: any) => u.high_score > user.high_score).length + 1;
-      const gamesPlayedRank = leaderboardData.filter((u: any) => u.games_played > user.games_played).length + 1;
+      const highScoreRank = leaderboardData.filter((u: any) => u.highScore > user.highScore).length + 1;
+      const gamesPlayedRank = leaderboardData.filter((u: any) => u.gamesPlayed > user.gamesPlayed).length + 1;
       const avgScoreRank = leaderboardData.filter((u: any) => u.avgScore > user.avgScore).length + 1;
 
       user.highScoreRank = highScoreRank;
