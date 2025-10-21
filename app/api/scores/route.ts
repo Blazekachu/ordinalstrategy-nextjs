@@ -35,12 +35,19 @@ export async function POST(request: NextRequest) {
     });
 
     // Update user stats
-    await User.findByIdAndUpdate(user._id, {
+    const updateData: any = {
       $inc: {
         totalScore: score,
         gamesPlayed: 1,
       },
-    });
+    };
+
+    // Update high score if this score is higher
+    if (score > (user.highScore || 0)) {
+      updateData.$set = { highScore: score };
+    }
+
+    await User.findByIdAndUpdate(user._id, updateData);
 
     return NextResponse.json({ gameScore }, { status: 201 });
   } catch (error) {
@@ -54,15 +61,17 @@ export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
     const privyId = searchParams.get('privyId');
+    const walletAddress = searchParams.get('walletAddress');
     const gameName = searchParams.get('gameName') || 'foxjump';
     const limit = parseInt(searchParams.get('limit') || '10');
     const type = searchParams.get('type') || 'leaderboard'; // 'leaderboard' or 'user'
 
     await dbConnect();
 
-    if (type === 'user' && privyId) {
-      // Get user's scores
-      const user = await User.findOne({ privyId });
+    if (type === 'user' && (privyId || walletAddress)) {
+      // Get user's scores - support both privyId and walletAddress
+      const query = privyId ? { privyId } : { walletAddress };
+      const user = await User.findOne(query);
       if (!user) {
         return NextResponse.json({ scores: [] }, { status: 200 });
       }
@@ -80,7 +89,7 @@ export async function GET(request: NextRequest) {
       const scores = await GameScore.find({ gameName })
         .sort({ score: -1 })
         .limit(limit)
-        .populate('userId', 'twitterHandle privyId totalScore');
+        .populate('userId', 'username twitterHandle privyId walletAddress totalScore highScore');
 
       return NextResponse.json({ scores }, { status: 200 });
     }
