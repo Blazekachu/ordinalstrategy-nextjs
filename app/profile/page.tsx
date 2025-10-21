@@ -142,7 +142,18 @@ export default function ProfilePage() {
     if (activeTab === 'inscriptions' && ordinalsAddress) {
       fetchInscriptions();
     }
-  }, [activeTab, ordinalsAddress]);
+    
+    // Refresh user data and scores when switching to games tab
+    if (activeTab === 'games' && connected && address) {
+      fetchUserData();
+      fetchUserScores();
+    }
+    
+    // Refresh user data when switching to profile tab
+    if (activeTab === 'profile' && connected && address) {
+      fetchUserData();
+    }
+  }, [activeTab, ordinalsAddress, connected, address]);
 
   useEffect(() => {
     if (activeTab === 'leaderboard') {
@@ -157,7 +168,19 @@ export default function ProfilePage() {
       setSparkAddressInput(savedSparkAddress);
       fetchSparkBalance(savedSparkAddress);
     }
-  }, []);
+
+    // Auto-refresh data when page becomes visible (user returns from game)
+    const handleVisibilityChange = () => {
+      if (!document.hidden && connected && address) {
+        console.log('Page visible - refreshing profile data');
+        fetchUserData();
+        fetchUserScores();
+      }
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
+  }, [connected, address]);
 
   const fetchSparkBalance = async (sparkAddr: string) => {
     if (!sparkAddr || !sparkAddr.startsWith('sp')) {

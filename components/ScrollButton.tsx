@@ -88,7 +88,7 @@ export default function ScrollButton({
 
       {/* Text */}
       <div
-        className="absolute inset-0 flex items-center justify-center font-bold text-base pointer-events-none z-10"
+        className="absolute inset-0 flex items-center justify-center font-bold text-base pointer-events-none z-10 px-14"
         style={{
           color: progress > 0.5 ? accentColor : backgroundColor,
           transition: 'color 0.2s',
