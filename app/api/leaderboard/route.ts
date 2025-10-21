@@ -1,70 +1,62 @@
 import { NextRequest, NextResponse } from 'next/server';
-import dbConnect from '@/lib/mongodb';
-import User from '@/models/User';
-import GameScore from '@/models/GameScore';
+import { supabaseAdmin } from '@/lib/supabase';
 
 export async function GET(request: NextRequest) {
   try {
-    await dbConnect();
-
     const searchParams = request.nextUrl.searchParams;
     const sortBy = searchParams.get('sortBy') || 'highScore'; // highScore, gamesPlayed, avgScore
     const limit = parseInt(searchParams.get('limit') || '100');
 
     // Get all users with their stats
-    const users = await User.find({})
-      .select('username profilePic walletAddress nativeSegwitAddress taprootAddress totalScore gamesPlayed highScore inscriptionCount')
-      .lean();
+    const { data: users, error } = await supabaseAdmin
+      .from('users')
+      .select('username, profile_pic, wallet_address, native_segwit_address, taproot_address, total_score, games_played, high_score, inscription_count');
+
+    if (error) throw error;
+
+    if (!users || users.length === 0) {
+      return NextResponse.json({ 
+        leaderboard: [],
+        total: 0
+      });
+    }
 
     // Calculate average scores and add rankings
-    const leaderboardData = await Promise.all(
-      users.map(async (user) => {
-        const avgScore = user.gamesPlayed > 0 
-          ? Math.round(user.totalScore / user.gamesPlayed) 
-          : 0;
+    const leaderboardData = users.map((user: any) => {
+      const avgScore = user.games_played > 0 
+        ? Math.round(user.total_score / user.games_played) 
+        : 0;
 
-        // Get user's rank by high score
-        const highScoreRank = await User.countDocuments({
-          highScore: { $gt: user.highScore }
-        }) + 1;
-
-        // Get user's rank by games played
-        const gamesPlayedRank = await User.countDocuments({
-          gamesPlayed: { $gt: user.gamesPlayed }
-        }) + 1;
-
-        // Get user's rank by avg score
-        const usersWithHigherAvg = await User.find({
-          gamesPlayed: { $gt: 0 }
-        }).lean();
-        
-        const avgScoreRank = usersWithHigherAvg.filter(u => {
-          const theirAvg = u.totalScore / u.gamesPlayed;
-          return theirAvg > avgScore;
-        }).length + 1;
-
-        return {
-          ...user,
-          avgScore,
-          displayName: user.username || `${user.walletAddress?.slice(0, 6)}...${user.walletAddress?.slice(-4)}`,
-          highScoreRank,
-          gamesPlayedRank,
-          avgScoreRank,
-        };
-      })
-    );
+      return {
+        ...user,
+        avgScore,
+        displayName: user.username || `${user.wallet_address?.slice(0, 6)}...${user.wallet_address?.slice(-4)}`,
+      };
+    });
 
     // Sort based on sortBy parameter
-    leaderboardData.sort((a, b) => {
+    leaderboardData.sort((a: any, b: any) => {
       switch (sortBy) {
         case 'gamesPlayed':
-          return b.gamesPlayed - a.gamesPlayed;
+          return b.games_played - a.games_played;
         case 'avgScore':
           return b.avgScore - a.avgScore;
         case 'highScore':
         default:
-          return b.highScore - a.highScore;
+          return b.high_score - a.high_score;
       }
+    });
+
+    // Add ranks after sorting
+    leaderboardData.forEach((user: any, index: number) => {
+      // Calculate ranks for each category
+      const highScoreRank = leaderboardData.filter((u: any) => u.high_score > user.high_score).length + 1;
+      const gamesPlayedRank = leaderboardData.filter((u: any) => u.games_played > user.games_played).length + 1;
+      const avgScoreRank = leaderboardData.filter((u: any) => u.avgScore > user.avgScore).length + 1;
+
+      user.highScoreRank = highScoreRank;
+      user.gamesPlayedRank = gamesPlayedRank;
+      user.avgScoreRank = avgScoreRank;
     });
 
     // Limit results
@@ -82,4 +74,3 @@ export async function GET(request: NextRequest) {
     );
   }
 }
-

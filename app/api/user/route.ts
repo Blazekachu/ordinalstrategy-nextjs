@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import dbConnect from '@/lib/mongodb';
-import User from '@/models/User';
+import { supabaseAdmin } from '@/lib/supabase';
 
 export async function GET(request: NextRequest) {
   try {
@@ -11,12 +10,33 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'PrivyId required' }, { status: 400 });
     }
 
-    await dbConnect();
-    let user = await User.findOne({ privyId });
+    // Find user by privyId
+    const { data: existingUsers } = await supabaseAdmin
+      .from('users')
+      .select('*')
+      .eq('privy_id', privyId)
+      .limit(1);
 
-    if (!user) {
+    let user;
+
+    if (!existingUsers || existingUsers.length === 0) {
       // Create new user if doesn't exist
-      user = await User.create({ privyId });
+      const { data: newUser, error } = await supabaseAdmin
+        .from('users')
+        .insert({
+          privy_id: privyId,
+          total_score: 0,
+          games_played: 0,
+          high_score: 0,
+          inscription_count: 0,
+        })
+        .select()
+        .single();
+
+      if (error) throw error;
+      user = newUser;
+    } else {
+      user = existingUsers[0];
     }
 
     return NextResponse.json({ user }, { status: 200 });
@@ -35,19 +55,51 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'PrivyId required' }, { status: 400 });
     }
 
-    await dbConnect();
-    
-    const user = await User.findOneAndUpdate(
-      { privyId },
-      {
-        $set: {
-          twitterHandle,
-          twitterId,
-          walletAddress,
-        },
-      },
-      { new: true, upsert: true }
-    );
+    // Find or create user
+    const { data: existingUsers } = await supabaseAdmin
+      .from('users')
+      .select('*')
+      .eq('privy_id', privyId)
+      .limit(1);
+
+    let user;
+
+    if (!existingUsers || existingUsers.length === 0) {
+      // Create new user
+      const { data: newUser, error } = await supabaseAdmin
+        .from('users')
+        .insert({
+          privy_id: privyId,
+          twitter_handle: twitterHandle,
+          twitter_id: twitterId,
+          wallet_address: walletAddress,
+          total_score: 0,
+          games_played: 0,
+          high_score: 0,
+          inscription_count: 0,
+        })
+        .select()
+        .single();
+
+      if (error) throw error;
+      user = newUser;
+    } else {
+      // Update existing user
+      const { data: updatedUser, error } = await supabaseAdmin
+        .from('users')
+        .update({
+          twitter_handle: twitterHandle,
+          twitter_id: twitterId,
+          wallet_address: walletAddress,
+          updated_at: new Date().toISOString(),
+        })
+        .eq('id', existingUsers[0].id)
+        .select()
+        .single();
+
+      if (error) throw error;
+      user = updatedUser;
+    }
 
     return NextResponse.json({ user }, { status: 200 });
   } catch (error) {
@@ -55,4 +107,3 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'Failed to update user' }, { status: 500 });
   }
 }
-

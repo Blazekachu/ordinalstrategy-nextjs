@@ -1,11 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
-import dbConnect from '@/lib/mongodb';
-import User from '@/models/User';
+import { supabaseAdmin } from '@/lib/supabase';
 
 export async function PUT(request: NextRequest) {
   try {
-    await dbConnect();
-
     const body = await request.json();
     const { 
       walletAddress, 
@@ -26,13 +23,13 @@ export async function PUT(request: NextRequest) {
 
     // Check if username is taken by another user
     if (username) {
-      const existingUser = await User.findOne({ 
-        username: username,
-        $nor: [
-          { walletAddress: walletAddress },
-          { privyId: walletAddress }
-        ]
-      });
+      const { data: existingUser } = await supabaseAdmin
+        .from('users')
+        .select('id')
+        .eq('username', username)
+        .neq('wallet_address', walletAddress)
+        .neq('privy_id', walletAddress)
+        .single();
       
       if (existingUser) {
         return NextResponse.json(
@@ -42,44 +39,64 @@ export async function PUT(request: NextRequest) {
       }
     }
 
-    // Find user by wallet address OR privyId (since we use wallet as privyId)
-    let user = await User.findOne({ 
-      $or: [
-        { walletAddress: walletAddress },
-        { privyId: walletAddress }
-      ]
-    });
+    // Find user by wallet address OR privyId
+    const { data: existingUsers } = await supabaseAdmin
+      .from('users')
+      .select('*')
+      .or(`wallet_address.eq.${walletAddress},privy_id.eq.${walletAddress}`)
+      .limit(1);
 
-    if (!user) {
-      // Create new user with wallet address as both privyId and walletAddress
-      user = await User.create({
-        privyId: walletAddress,
-        walletAddress,
-        username: username || undefined,
-        profilePic: profilePic || undefined,
-        nativeSegwitAddress,
-        taprootAddress,
-        sparkAddress,
-        inscriptionCount: inscriptionCount || 0,
-        totalScore: 0,
-        gamesPlayed: 0,
-        highScore: 0,
-      });
+    let user;
+
+    if (!existingUsers || existingUsers.length === 0) {
+      // Create new user
+      const { data: newUser, error } = await supabaseAdmin
+        .from('users')
+        .insert({
+          privy_id: walletAddress,
+          wallet_address: walletAddress,
+          username: username || null,
+          profile_pic: profilePic || null,
+          native_segwit_address: nativeSegwitAddress || null,
+          taproot_address: taprootAddress || null,
+          spark_address: sparkAddress || null,
+          inscription_count: inscriptionCount || 0,
+          total_score: 0,
+          games_played: 0,
+          high_score: 0,
+        })
+        .select()
+        .single();
+
+      if (error) throw error;
+      user = newUser;
     } else {
-      // Update user fields
-      if (username !== undefined) user.username = username;
-      if (profilePic !== undefined) user.profilePic = profilePic;
-      if (nativeSegwitAddress !== undefined) user.nativeSegwitAddress = nativeSegwitAddress;
-      if (taprootAddress !== undefined) user.taprootAddress = taprootAddress;
-      if (sparkAddress !== undefined) user.sparkAddress = sparkAddress;
-      if (inscriptionCount !== undefined) user.inscriptionCount = inscriptionCount;
-      
-      // Ensure walletAddress is set if it wasn't before
-      if (!user.walletAddress) {
-        user.walletAddress = walletAddress;
+      // Update existing user
+      const updateData: any = {
+        updated_at: new Date().toISOString(),
+      };
+
+      if (username !== undefined) updateData.username = username;
+      if (profilePic !== undefined) updateData.profile_pic = profilePic;
+      if (nativeSegwitAddress !== undefined) updateData.native_segwit_address = nativeSegwitAddress;
+      if (taprootAddress !== undefined) updateData.taproot_address = taprootAddress;
+      if (sparkAddress !== undefined) updateData.spark_address = sparkAddress;
+      if (inscriptionCount !== undefined) updateData.inscription_count = inscriptionCount;
+
+      // Ensure wallet_address is set
+      if (!existingUsers[0].wallet_address) {
+        updateData.wallet_address = walletAddress;
       }
-      
-      await user.save();
+
+      const { data: updatedUser, error } = await supabaseAdmin
+        .from('users')
+        .update(updateData)
+        .eq('id', existingUsers[0].id)
+        .select()
+        .single();
+
+      if (error) throw error;
+      user = updatedUser;
     }
 
     return NextResponse.json({ success: true, user });
@@ -94,8 +111,6 @@ export async function PUT(request: NextRequest) {
 
 export async function GET(request: NextRequest) {
   try {
-    await dbConnect();
-
     const searchParams = request.nextUrl.searchParams;
     const walletAddress = searchParams.get('walletAddress');
 
@@ -107,23 +122,33 @@ export async function GET(request: NextRequest) {
     }
 
     // Find user by wallet address OR privyId
-    let user = await User.findOne({ 
-      $or: [
-        { walletAddress: walletAddress },
-        { privyId: walletAddress }
-      ]
-    });
+    const { data: existingUsers } = await supabaseAdmin
+      .from('users')
+      .select('*')
+      .or(`wallet_address.eq.${walletAddress},privy_id.eq.${walletAddress}`)
+      .limit(1);
 
-    if (!user) {
+    let user;
+
+    if (!existingUsers || existingUsers.length === 0) {
       // Create a new user if not found
-      user = await User.create({
-        privyId: walletAddress,
-        walletAddress,
-        totalScore: 0,
-        gamesPlayed: 0,
-        highScore: 0,
-        inscriptionCount: 0,
-      });
+      const { data: newUser, error } = await supabaseAdmin
+        .from('users')
+        .insert({
+          privy_id: walletAddress,
+          wallet_address: walletAddress,
+          total_score: 0,
+          games_played: 0,
+          high_score: 0,
+          inscription_count: 0,
+        })
+        .select()
+        .single();
+
+      if (error) throw error;
+      user = newUser;
+    } else {
+      user = existingUsers[0];
     }
 
     return NextResponse.json({ user });
@@ -135,4 +160,3 @@ export async function GET(request: NextRequest) {
     );
   }
 }
-
