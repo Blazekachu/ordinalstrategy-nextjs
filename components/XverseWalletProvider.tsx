@@ -44,73 +44,33 @@ export function XverseWalletProvider({ children }: { children: ReactNode }) {
   });
 
   useEffect(() => {
-    // Handle mobile callback from Xverse app
-    const handleMobileCallback = async () => {
-      const urlParams = new URLSearchParams(window.location.search);
-      const ordinalsAddress = urlParams.get('ordinalsAddress');
-      const paymentAddress = urlParams.get('paymentAddress');
-      
-      if (ordinalsAddress && paymentAddress) {
-        // Save to localStorage
-        localStorage.setItem('xverse_address', paymentAddress);
-        localStorage.setItem('xverse_ordinals_address', ordinalsAddress);
-        
-        // Fetch balances
-        const paymentBalance = await fetchBalance(paymentAddress);
-        const ordinalsBalance = await fetchBalance(ordinalsAddress);
-        
-        setWalletState({
-          connected: true,
-          address: paymentAddress,
-          ordinalsAddress: ordinalsAddress,
-          sparkAddress: null,
-          balance: paymentBalance,
-          nativeSegwit: { address: paymentAddress, balance: paymentBalance },
-          nestedSegwit: null,
-          taproot: { address: ordinalsAddress, balance: ordinalsBalance },
-          spark: null,
-          loading: false,
-        });
-        
-        // Clean up URL
-        window.history.replaceState({}, document.title, window.location.pathname);
-        return true;
-      }
-      return false;
-    };
+    // Check if wallet was previously connected
+    const savedAddress = localStorage.getItem('xverse_address');
+    const savedOrdinalsAddress = localStorage.getItem('xverse_ordinals_address');
+    const savedSparkAddress = localStorage.getItem('xverse_spark_address');
     
-    // Check for mobile callback first
-    handleMobileCallback().then((hadCallback) => {
-      if (hadCallback) return;
-      
-      // Otherwise check if wallet was previously connected
-      const savedAddress = localStorage.getItem('xverse_address');
-      const savedOrdinalsAddress = localStorage.getItem('xverse_ordinals_address');
-      const savedSparkAddress = localStorage.getItem('xverse_spark_address');
-      
-      if (savedAddress && savedOrdinalsAddress) {
-        const initBalance = async () => {
-          const balance = await fetchBalance(savedAddress);
-          const sparkBalance = savedSparkAddress ? await fetchBalance(savedSparkAddress) : null;
-          setWalletState(prev => ({
-            ...prev,
-            connected: true,
-            address: savedAddress,
-            ordinalsAddress: savedOrdinalsAddress,
-            sparkAddress: savedSparkAddress,
-            balance,
-            nativeSegwit: { address: savedAddress, balance },
-            taproot: { address: savedOrdinalsAddress, balance: null },
-            spark: savedSparkAddress ? { address: savedSparkAddress, balance: sparkBalance } : null,
-            loading: false,
-          }));
-        };
-        initBalance();
-      } else {
-        // No saved wallet, set loading to false
-        setWalletState(prev => ({ ...prev, loading: false }));
-      }
-    });
+    if (savedAddress && savedOrdinalsAddress) {
+      const initBalance = async () => {
+        const balance = await fetchBalance(savedAddress);
+        const sparkBalance = savedSparkAddress ? await fetchBalance(savedSparkAddress) : null;
+        setWalletState(prev => ({
+          ...prev,
+          connected: true,
+          address: savedAddress,
+          ordinalsAddress: savedOrdinalsAddress,
+          sparkAddress: savedSparkAddress,
+          balance,
+          nativeSegwit: { address: savedAddress, balance },
+          taproot: { address: savedOrdinalsAddress, balance: null },
+          spark: savedSparkAddress ? { address: savedSparkAddress, balance: sparkBalance } : null,
+          loading: false,
+        }));
+      };
+      initBalance();
+    } else {
+      // No saved wallet, set loading to false
+      setWalletState(prev => ({ ...prev, loading: false }));
+    }
   }, []);
 
   const fetchBalance = async (address: string): Promise<number | null> => {
@@ -166,17 +126,39 @@ export function XverseWalletProvider({ children }: { children: ReactNode }) {
       const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
       
       if (isMobile) {
-        // On mobile, use deep linking to open Xverse app
-        const currentUrl = window.location.origin + window.location.pathname;
-        const xverseUrl = `https://xverse.app/getAddress?purposes=ordinals,payment&message=Connect%20to%20Ordinal%20Strategy&network=mainnet&redirect_uri=${encodeURIComponent(currentUrl)}`;
+        // Check if we're in Xverse browser
+        if (typeof window !== 'undefined' && !(window as any).BitcoinProvider) {
+          // Not in Xverse browser - show instructions
+          alert(
+            '📱 To connect on mobile:\n\n' +
+            '1. Open Xverse Wallet app\n' +
+            '2. Tap the Browser icon (🌐) at the bottom\n' +
+            '3. Visit: ' + window.location.origin + '\n' +
+            '4. Click "Join" and connect your wallet\n\n' +
+            'Or install Xverse if you don\'t have it yet.'
+          );
+          
+          const installUrl = /iPhone|iPad|iPod/i.test(navigator.userAgent)
+            ? 'https://apps.apple.com/app/xverse-wallet/id1552205925'
+            : 'https://play.google.com/store/apps/details?id=com.secretkeylabs.xverse';
+          
+          // Copy URL to clipboard for convenience
+          if (navigator.clipboard) {
+            navigator.clipboard.writeText(window.location.origin).catch(() => {});
+          }
+          
+          // Optionally open install link
+          setTimeout(() => {
+            if (confirm('Open Xverse app store page?')) {
+              window.open(installUrl, '_blank');
+            }
+          }, 500);
+          
+          setWalletState(prev => ({ ...prev, loading: false }));
+          return;
+        }
         
-        // Open Xverse mobile app
-        window.location.href = xverseUrl;
-        
-        // Note: After user approves in Xverse app, they'll be redirected back
-        // We'll need to handle the callback with URL parameters
-        setWalletState(prev => ({ ...prev, loading: false }));
-        return;
+        // We're in Xverse browser - sats-connect should work
       }
       
       // Desktop: Use browser extension
