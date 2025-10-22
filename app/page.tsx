@@ -455,14 +455,14 @@ export default function Home() {
 
           {/* Price Bar (Left) - Hidden on mobile */}
           <div className={`hidden md:block fixed left-[18px] top-1/2 -translate-y-1/2 z-[1002] bg-[#14161c]/45 border border-white/12 rounded-2xl px-3.5 py-3 backdrop-blur-lg shadow-2xl pointer-events-none min-w-[180px] transition-opacity duration-200 ${contentReady ? 'opacity-100' : 'opacity-0'}`}>
-            <div className="text-[#ffd166] font-semibold">{btcPrice}</div>
+            <div className="magnify-target text-[#ffd166] font-semibold">{btcPrice}</div>
             {change7d && (
-              <div className={`text-sm ${change7d.positive ? 'text-[#36d399]' : 'text-[#ef4444]'}`}>
+              <div className={`magnify-target text-sm ${change7d.positive ? 'text-[#36d399]' : 'text-[#ef4444]'}`}>
                 7d: {change7d.value}
               </div>
             )}
             {change30d && (
-              <div className={`text-sm ${change30d.positive ? 'text-[#36d399]' : 'text-[#ef4444]'}`}>
+              <div className={`magnify-target text-sm ${change30d.positive ? 'text-[#36d399]' : 'text-[#ef4444]'}`}>
                 30d: {change30d.value}
               </div>
             )}
@@ -470,8 +470,8 @@ export default function Home() {
 
           {/* Ordinals Bar (Right) - Hidden on mobile */}
           <div className={`hidden md:block fixed right-[18px] top-1/2 -translate-y-1/2 z-[1002] bg-[#14161c]/45 border border-[#f7931a]/12 rounded-2xl px-3.5 py-3 backdrop-blur-lg shadow-2xl pointer-events-none min-w-[200px] transition-opacity duration-200 ${contentReady ? 'opacity-100' : 'opacity-0'}`}>
-            <div className="text-[#f7931a] text-sm">Inscriptions:</div>
-            <div className="text-[#ffd166] font-semibold">{latestInscription}</div>
+            <div className="magnify-target text-[#f7931a] text-sm">Inscriptions:</div>
+            <div className="magnify-target text-[#ffd166] font-semibold">{latestInscription}</div>
           </div>
 
           {/* Mascot */}
@@ -488,11 +488,11 @@ export default function Home() {
           {/* Header */}
           <header className="fixed bottom-0 left-0 right-0 z-[1000] bg-black/85 backdrop-blur-lg shadow-[0_-10px_30px_rgba(0,0,0,0.5)] h-[72px] flex items-center justify-between px-4 md:px-[10%]">
             <div className="logo">
-              <img src="/osfun.png" alt="Ordinal Strategy Logo" className="h-[32px] md:h-[42px] w-auto object-contain hover:scale-105 transition-transform" />
+              <img src="/osfun.png" alt="Ordinal Strategy Logo" className="magnify-target h-[32px] md:h-[42px] w-auto object-contain hover:scale-105 transition-transform" />
             </div>
             <nav className="flex gap-2 md:gap-2.5">
-              <a href="#about" className="text-[#f7931a] font-medium hover:text-white transition-colors text-xs md:text-base">About</a>
-              <a href="#community" className="text-[#f7931a] font-medium hover:text-white transition-colors text-xs md:text-base">Community</a>
+              <a href="#about" className="magnify-target text-[#f7931a] font-medium hover:text-white transition-colors text-xs md:text-base">About</a>
+              <a href="#community" className="magnify-target text-[#f7931a] font-medium hover:text-white transition-colors text-xs md:text-base">Community</a>
             </nav>
           </header>
 
@@ -503,13 +503,13 @@ export default function Home() {
           >
             {/* Footer - First in DOM for scroll-up effect */}
             <footer className="bg-[#090a0d] text-center py-8 text-gray-500 text-sm">
-              © 2025 OrdinalStrategy.fun — Built with precision on Bitcoin.
+              <span className="magnify-target">© 2025 OrdinalStrategy.fun — Built with precision on Bitcoin.</span>
             </footer>
 
             {/* Community Section */}
             <section id="community" className="min-h-screen flex flex-col justify-center items-center px-6 md:px-[10%] py-24">
-              <h3 className="text-3xl md:text-4xl text-[#f7931a] mb-6 text-center">Join the Movement</h3>
-              <p className="text-center max-w-3xl mb-8 text-base md:text-lg px-4">
+              <h3 className="magnify-target text-3xl md:text-4xl text-[#f7931a] mb-6 text-center">Join the Movement</h3>
+              <p className="magnify-target text-center max-w-3xl mb-8 text-base md:text-lg px-4">
                 Ordinals are the art of precision join us in mastering the strategy.
               </p>
               <ScrollButton
@@ -524,8 +524,8 @@ export default function Home() {
 
             {/* About Section */}
             <section id="about" className="min-h-screen flex flex-col justify-center items-center px-6 md:px-[10%] py-24">
-              <h3 className="text-3xl md:text-4xl text-[#f7931a] mb-6 text-center">Why Ordinal Strategy?</h3>
-              <p className="text-center max-w-3xl text-base md:text-lg px-4">
+              <h3 className="magnify-target text-3xl md:text-4xl text-[#f7931a] mb-6 text-center">Why Ordinal Strategy?</h3>
+              <p className="magnify-target text-center max-w-3xl text-base md:text-lg px-4">
                 We blend research, on-chain tools, and market data to empower collectors and creators. With precise insights and curated analytics, we help decode the Bitcoin Ordinals ecosystem for strategic advantage.
               </p>
             </section>
@@ -533,10 +533,10 @@ export default function Home() {
             {/* Hero Section - Last in DOM for scroll-up effect */}
             <section id="hero" className="min-h-screen flex flex-col justify-center items-center text-center px-4 md:px-[10%] bg-gradient-radial from-[#1b1c1f] to-[#0b0c10]">
               <div className="bg-white/5 backdrop-blur-md border border-white/10 rounded-3xl p-6 md:p-12 max-w-3xl">
-                <h2 className="text-3xl md:text-5xl font-bold text-[#f7931a] mb-4">
+                <h2 className="magnify-target text-3xl md:text-5xl font-bold text-[#f7931a] mb-4">
                   Precision in the World of Bitcoin Ordinals
                 </h2>
-                <p className="text-base md:text-xl mb-6 max-w-2xl">
+                <p className="magnify-target text-base md:text-xl mb-6 max-w-2xl">
                   Ordinal Strategy is a framework for research, tracking, and optimization across Bitcoin Ordinals, built for collectors, creators, and strategists.
                 </p>
                 <div className="flex gap-4 justify-center flex-wrap items-center">

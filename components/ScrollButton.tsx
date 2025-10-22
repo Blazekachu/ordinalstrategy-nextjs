@@ -94,7 +94,7 @@ export default function ScrollButton({
           transition: 'color 0.2s',
         }}
       >
-        {text.toUpperCase()}
+        <span className="magnify-target">{text.toUpperCase()}</span>
       </div>
 
       {/* Draggable Handle */}
