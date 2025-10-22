@@ -338,8 +338,8 @@ export default function Home() {
 
   return (
     <div className="min-h-screen bg-[#0b0c10] text-white relative">
-      {/* Magnifying Lens Effect */}
-      <MagnifyLens intensity={1.8} radius={120} enabled={!showGate} />
+      {/* Magnifying Lens Effect - Small and Subtle */}
+      <MagnifyLens intensity={1.2} radius={35} enabled={!showGate} />
       
       {/* Landing Overlay */}
       {showGate && (
