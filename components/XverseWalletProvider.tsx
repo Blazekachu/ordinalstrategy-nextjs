@@ -44,33 +44,73 @@ export function XverseWalletProvider({ children }: { children: ReactNode }) {
   });
 
   useEffect(() => {
-    // Check if wallet was previously connected
-    const savedAddress = localStorage.getItem('xverse_address');
-    const savedOrdinalsAddress = localStorage.getItem('xverse_ordinals_address');
-    const savedSparkAddress = localStorage.getItem('xverse_spark_address');
-    
-    if (savedAddress && savedOrdinalsAddress) {
-      const initBalance = async () => {
-        const balance = await fetchBalance(savedAddress);
-        const sparkBalance = savedSparkAddress ? await fetchBalance(savedSparkAddress) : null;
-        setWalletState(prev => ({
-          ...prev,
+    // Handle mobile callback from Xverse app
+    const handleMobileCallback = async () => {
+      const urlParams = new URLSearchParams(window.location.search);
+      const ordinalsAddress = urlParams.get('ordinalsAddress');
+      const paymentAddress = urlParams.get('paymentAddress');
+      
+      if (ordinalsAddress && paymentAddress) {
+        // Save to localStorage
+        localStorage.setItem('xverse_address', paymentAddress);
+        localStorage.setItem('xverse_ordinals_address', ordinalsAddress);
+        
+        // Fetch balances
+        const paymentBalance = await fetchBalance(paymentAddress);
+        const ordinalsBalance = await fetchBalance(ordinalsAddress);
+        
+        setWalletState({
           connected: true,
-          address: savedAddress,
-          ordinalsAddress: savedOrdinalsAddress,
-          sparkAddress: savedSparkAddress,
-          balance,
-          nativeSegwit: { address: savedAddress, balance },
-          taproot: { address: savedOrdinalsAddress, balance: null },
-          spark: savedSparkAddress ? { address: savedSparkAddress, balance: sparkBalance } : null,
+          address: paymentAddress,
+          ordinalsAddress: ordinalsAddress,
+          sparkAddress: null,
+          balance: paymentBalance,
+          nativeSegwit: { address: paymentAddress, balance: paymentBalance },
+          nestedSegwit: null,
+          taproot: { address: ordinalsAddress, balance: ordinalsBalance },
+          spark: null,
           loading: false,
-        }));
-      };
-      initBalance();
-    } else {
-      // No saved wallet, set loading to false
-      setWalletState(prev => ({ ...prev, loading: false }));
-    }
+        });
+        
+        // Clean up URL
+        window.history.replaceState({}, document.title, window.location.pathname);
+        return true;
+      }
+      return false;
+    };
+    
+    // Check for mobile callback first
+    handleMobileCallback().then((hadCallback) => {
+      if (hadCallback) return;
+      
+      // Otherwise check if wallet was previously connected
+      const savedAddress = localStorage.getItem('xverse_address');
+      const savedOrdinalsAddress = localStorage.getItem('xverse_ordinals_address');
+      const savedSparkAddress = localStorage.getItem('xverse_spark_address');
+      
+      if (savedAddress && savedOrdinalsAddress) {
+        const initBalance = async () => {
+          const balance = await fetchBalance(savedAddress);
+          const sparkBalance = savedSparkAddress ? await fetchBalance(savedSparkAddress) : null;
+          setWalletState(prev => ({
+            ...prev,
+            connected: true,
+            address: savedAddress,
+            ordinalsAddress: savedOrdinalsAddress,
+            sparkAddress: savedSparkAddress,
+            balance,
+            nativeSegwit: { address: savedAddress, balance },
+            taproot: { address: savedOrdinalsAddress, balance: null },
+            spark: savedSparkAddress ? { address: savedSparkAddress, balance: sparkBalance } : null,
+            loading: false,
+          }));
+        };
+        initBalance();
+      } else {
+        // No saved wallet, set loading to false
+        setWalletState(prev => ({ ...prev, loading: false }));
+      }
+    });
   }, []);
 
   const fetchBalance = async (address: string): Promise<number | null> => {
@@ -122,6 +162,24 @@ export function XverseWalletProvider({ children }: { children: ReactNode }) {
     setWalletState(prev => ({ ...prev, loading: true }));
     
     try {
+      // Detect if user is on mobile
+      const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+      
+      if (isMobile) {
+        // On mobile, use deep linking to open Xverse app
+        const currentUrl = window.location.origin + window.location.pathname;
+        const xverseUrl = `https://xverse.app/getAddress?purposes=ordinals,payment&message=Connect%20to%20Ordinal%20Strategy&network=mainnet&redirect_uri=${encodeURIComponent(currentUrl)}`;
+        
+        // Open Xverse mobile app
+        window.location.href = xverseUrl;
+        
+        // Note: After user approves in Xverse app, they'll be redirected back
+        // We'll need to handle the callback with URL parameters
+        setWalletState(prev => ({ ...prev, loading: false }));
+        return;
+      }
+      
+      // Desktop: Use browser extension
       const response = await request('getAccounts', {
         purposes: [AddressPurpose.Ordinals, AddressPurpose.Payment],
         message: 'Connect to Ordinal Strategy',
