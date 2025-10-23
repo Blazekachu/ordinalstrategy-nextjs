@@ -296,8 +296,9 @@ export default function ProfilePage() {
     try {
       // Using Ordiscan API - professional hosted Ordinals indexer
       // API Docs: https://ordiscan.com/docs/api
+      // Note: We limit to 1000 inscriptions for display, but total count comes from API metadata
       const response = await fetch(
-        `https://api.ordiscan.com/v1/address/${taprootAddr}/inscriptions?limit=200`,
+        `https://api.ordiscan.com/v1/address/${taprootAddr}/inscriptions?limit=1000`,
         {
           headers: {
             'Accept': 'application/json',
@@ -330,17 +331,21 @@ export default function ProfilePage() {
       let fetchedInscriptions = data.data || data.results || [];
       
       // Try different possible locations for total count
+      // IMPORTANT: This should be the ACTUAL total, not just what we fetched
       const totalCount = data.total || 
                         data.totalCount || 
                         data.count || 
                         data.pagination?.total ||
                         data.meta?.total ||
-                        fetchedInscriptions.length || // Fallback to array length if no total field
-                        0;
+                        0; // Don't fallback to array length - we want the real total!
       
-      console.log('Total inscriptions from API:', totalCount);
-      console.log('Fetched inscriptions count:', fetchedInscriptions.length);
-      console.log('Data keys:', Object.keys(data));
+      console.log('📊 ACTUAL total inscriptions (from API):', totalCount);
+      console.log('📦 Fetched for display (limited):', fetchedInscriptions.length);
+      console.log('🔑 Response data keys:', Object.keys(data));
+      
+      // If API doesn't provide total, calculate from fetched (only as last resort)
+      const finalTotal = totalCount > 0 ? totalCount : fetchedInscriptions.length;
+      console.log('✅ Using total count:', finalTotal);
       
       // Transform Ordiscan format to match our expected format
       fetchedInscriptions = fetchedInscriptions.map((insc: any) => ({
@@ -366,7 +371,10 @@ export default function ProfilePage() {
       // 'latest' is already the default order from API
       
       setInscriptions(fetchedInscriptions);
-      setTotalInscriptionCount(totalCount);
+      setTotalInscriptionCount(finalTotal); // Use the calculated final total
+      
+      console.log('🎯 Updated state with', fetchedInscriptions.length, 'inscriptions to display');
+      console.log('🎯 Total count set to:', finalTotal);
     } catch (error) {
       console.error('Error fetching inscriptions:', error);
       // If API fails, show a helpful message but don't set count to 0
