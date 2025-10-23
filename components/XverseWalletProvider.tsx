@@ -209,7 +209,7 @@ export function XverseWalletProvider({ children }: { children: ReactNode }) {
         // Documentation: https://docs.xverse.app/sats-connect/spark-methods/spark_getaddress
         let sparkAddress = null;
         try {
-          const sparkResponse = await request('spark_getAddress', {});
+          const sparkResponse = await request('spark_getAddresses', {});
           if (sparkResponse.status === 'success' && sparkResponse.result && sparkResponse.result.length > 0) {
             sparkAddress = sparkResponse.result[0].address;
             console.log('Spark address connected:', sparkAddress);
