@@ -933,9 +933,10 @@ export default function ProfilePage() {
                         key={inscription.id}
                         className="group bg-gradient-to-br from-[#111317]/90 to-[#1b1c1f]/90 backdrop-blur-sm rounded-2xl border-2 border-[#f7931a]/20 hover:border-[#f7931a]/60 hover:shadow-[0_10px_40px_rgba(247,147,26,0.2)] hover:-translate-y-1 transition-all duration-300 overflow-hidden"
                       >
-                        {/* Inscription Preview */}
-                        <div className="aspect-square bg-black/40 flex items-center justify-center p-4 relative overflow-hidden">
+                        {/* Inscription Preview - Rendered like Xverse */}
+                        <div className="aspect-square bg-black/40 flex items-center justify-center relative overflow-hidden">
                           {inscription.content_type?.startsWith('image/') ? (
+                            // Images: JPEG, PNG, GIF, SVG, WebP
                             <img
                               src={`https://ordinals.com/content/${inscription.id}`}
                               alt={`Inscription ${inscription.number}`}
@@ -943,31 +944,80 @@ export default function ProfilePage() {
                               loading="lazy"
                               onError={(e) => {
                                 const img = e.target as HTMLImageElement;
-                                // Try alternative image sources
                                 if (img.src.includes('ordinals.com')) {
                                   img.src = `https://ord-mirror.magiceden.dev/content/${inscription.id}`;
                                 } else if (img.src.includes('magiceden')) {
                                   img.src = `https://ordinals.hiro.so/inscription/${inscription.id}/content`;
-                                } else {
-                                  // If all fail, show icon
-                                  img.style.display = 'none';
-                                  const parent = img.parentElement;
-                                  if (parent) {
-                                    parent.innerHTML = '<div class="text-[#f7931a] text-4xl">🖼️</div>';
-                                  }
                                 }
                               }}
                             />
-                          ) : inscription.content_type?.startsWith('text/') ? (
-                            <div className="text-[#f7931a] text-4xl">📄</div>
+                          ) : inscription.content_type?.includes('html') || inscription.content_type?.includes('text/html') ? (
+                            // HTML: Render in sandbox iframe like Xverse
+                            <iframe
+                              src={`https://ordinals.com/content/${inscription.id}`}
+                              className="w-full h-full border-0"
+                              sandbox="allow-scripts"
+                              title={`Inscription ${inscription.number}`}
+                              loading="lazy"
+                            />
+                          ) : inscription.content_type?.startsWith('text/plain') ? (
+                            // Text files: Display text content
+                            <iframe
+                              src={`https://ordinals.com/content/${inscription.id}`}
+                              className="w-full h-full border-0 bg-white text-black p-2 text-xs"
+                              sandbox=""
+                              title={`Inscription ${inscription.number}`}
+                              loading="lazy"
+                            />
                           ) : inscription.content_type?.startsWith('video/') ? (
-                            <div className="text-[#f7931a] text-4xl">🎬</div>
+                            // Videos: MP4, WebM, etc
+                            <video
+                              src={`https://ordinals.com/content/${inscription.id}`}
+                              className="w-full h-full object-contain"
+                              controls
+                              loop
+                              muted
+                              playsInline
+                              preload="metadata"
+                            />
                           ) : inscription.content_type?.startsWith('audio/') ? (
-                            <div className="text-[#f7931a] text-4xl">🎵</div>
-                          ) : inscription.content_type?.includes('html') ? (
-                            <div className="text-[#f7931a] text-4xl">🌐</div>
+                            // Audio: MP3, WAV, etc
+                            <div className="flex flex-col items-center justify-center w-full h-full p-4">
+                              <div className="text-[#f7931a] text-5xl mb-4">🎵</div>
+                              <audio
+                                src={`https://ordinals.com/content/${inscription.id}`}
+                                controls
+                                className="w-full"
+                                preload="metadata"
+                              />
+                            </div>
+                          ) : inscription.content_type?.includes('model') || inscription.content_type?.includes('obj') || inscription.content_type?.includes('gltf') ? (
+                            // 3D Models: .obj, .gltf - Show in iframe with model viewer
+                            <iframe
+                              src={`https://ordinals.com/content/${inscription.id}`}
+                              className="w-full h-full border-0"
+                              sandbox="allow-scripts"
+                              title={`3D Model ${inscription.number}`}
+                              loading="lazy"
+                            />
+                          ) : inscription.content_type?.startsWith('application/json') ? (
+                            // JSON: Display formatted
+                            <iframe
+                              src={`https://ordinals.com/content/${inscription.id}`}
+                              className="w-full h-full border-0 bg-white text-black p-2 text-xs"
+                              sandbox=""
+                              title={`Inscription ${inscription.number}`}
+                              loading="lazy"
+                            />
                           ) : (
-                            <div className="text-[#f7931a] text-4xl">🎨</div>
+                            // Unknown: Try iframe fallback
+                            <iframe
+                              src={`https://ordinals.com/content/${inscription.id}`}
+                              className="w-full h-full border-0"
+                              sandbox="allow-scripts"
+                              title={`Inscription ${inscription.number}`}
+                              loading="lazy"
+                            />
                           )}
                         </div>
 
