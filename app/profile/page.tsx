@@ -556,8 +556,8 @@ export default function ProfilePage() {
                       <span className="text-white font-semibold">{userData?.username || 'Not set'}</span>
                     </div>
                     <div className="flex items-center justify-between py-3 border-b border-gray-700">
-                      <span className="text-gray-400">Wallet Address</span>
-                      <span className="text-white font-mono text-sm">{address && `${address.slice(0, 10)}...${address.slice(-10)}`}</span>
+                      <span className="text-gray-400">Spark Address</span>
+                      <span className="text-blue-300 font-mono text-sm">{spark?.address && `${spark.address.slice(0, 10)}...${spark.address.slice(-10)}`}</span>
                     </div>
                     <div className="flex items-center justify-between py-3 border-b border-gray-700">
                       <span className="text-gray-400">Games Played</span>
@@ -674,14 +674,6 @@ export default function ProfilePage() {
             {/* Addresses & Sats Tab */}
             {activeTab === 'addresses' && (
               <div className="space-y-6">
-                {/* Info Banner */}
-                <div className="bg-blue-500/10 border border-blue-500/30 rounded-xl p-4">
-                  <p className="text-blue-300 text-sm">
-                    <span className="font-bold">⚡ Spark L2</span> is your primary address for all operations. 
-                    SegWit and Taproot addresses are shown for balance and inscription tracking only.
-                  </p>
-                </div>
-
                 {/* Spark (Bitcoin L2) - PRIMARY */}
                 {spark && (
                   <div className="group bg-gradient-to-br from-[#111317]/90 to-[#1b1c1f]/90 backdrop-blur-sm p-6 rounded-2xl border-2 border-blue-500/20 hover:border-blue-500/60 hover:shadow-[0_10px_40px_rgba(59,130,246,0.2)] transition-all duration-300">
