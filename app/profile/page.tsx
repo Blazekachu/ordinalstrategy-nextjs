@@ -294,32 +294,32 @@ export default function ProfilePage() {
     console.log('Fetching ALL inscriptions for Taproot address:', taprootAddr);
     setLoadingInscriptions(true);
     try {
-      // Using Ordiscan API with pagination to fetch ALL inscriptions
-      // API Docs: https://ordiscan.com/docs/api
+      // Using Unisat API - more reliable and complete inscription data
+      // Unisat powers many Bitcoin wallets and has comprehensive indexing
       let allInscriptions: any[] = [];
-      let offset = 0;
-      const limit = 500; // Fetch 500 at a time for efficiency
+      let cursor = 0;
+      const size = 100; // Unisat API works best with smaller batches
       let hasMore = true;
       let totalFromAPI = 0;
       
-      console.log('🔄 Starting paginated fetch...');
+      console.log('🔄 Starting paginated fetch with Unisat API...');
       
       // Paginate through ALL inscriptions
       while (hasMore) {
-        console.log(`📥 Fetching batch: offset=${offset}, limit=${limit}`);
+        console.log(`📥 Fetching batch: cursor=${cursor}, size=${size}`);
         
         const response = await fetch(
-          `https://api.ordiscan.com/v1/address/${taprootAddr}/inscriptions?limit=${limit}&offset=${offset}`,
+          `https://open-api.unisat.io/v1/indexer/address/${taprootAddr}/inscription-data?cursor=${cursor}&size=${size}`,
           {
             headers: {
               'Accept': 'application/json',
-              'Authorization': `Bearer ***REMOVED***`,
+              'Authorization': 'Bearer ***REMOVED***',
             }
           }
         );
         
         if (!response.ok) {
-          console.error('Ordiscan API error:', response.status, response.statusText);
+          console.error('Unisat API error:', response.status, response.statusText);
           
           try {
             const errorBody = await response.text();
@@ -334,22 +334,17 @@ export default function ProfilePage() {
         const data = await response.json();
         
         // On first request, log the response structure
-        if (offset === 0) {
-          console.log('📋 First batch response structure:', JSON.stringify(data, null, 2));
+        if (cursor === 0) {
+          console.log('📋 Unisat response structure:', JSON.stringify(data, null, 2));
           console.log('🔑 Response data keys:', Object.keys(data));
           
-          // Get total count from API metadata
-          totalFromAPI = data.total || 
-                        data.totalCount || 
-                        data.count || 
-                        data.pagination?.total ||
-                        data.meta?.total ||
-                        0;
+          // Unisat API format: { code: 0, msg: "ok", data: { total: X, inscription: [...] } }
+          totalFromAPI = data.data?.total || 0;
           
           console.log('📊 TOTAL inscriptions from API:', totalFromAPI);
         }
         
-        const batchInscriptions = data.data || data.results || [];
+        const batchInscriptions = data.data?.inscription || [];
         console.log(`✅ Fetched ${batchInscriptions.length} inscriptions in this batch`);
         
         if (batchInscriptions.length === 0) {
@@ -359,7 +354,7 @@ export default function ProfilePage() {
         }
         
         allInscriptions = [...allInscriptions, ...batchInscriptions];
-        offset += limit;
+        cursor += size;
         
         // Safety check: if we've fetched more than the total, stop
         if (totalFromAPI > 0 && allInscriptions.length >= totalFromAPI) {
@@ -367,15 +362,15 @@ export default function ProfilePage() {
           hasMore = false;
         }
         
-        // Also stop if we got less than the limit (last page)
-        if (batchInscriptions.length < limit) {
+        // Also stop if we got less than the size (last page)
+        if (batchInscriptions.length < size) {
           console.log('🎯 Fetched last page (incomplete batch)');
           hasMore = false;
         }
         
-        // Safety limit: don't fetch more than 10,000 inscriptions
-        if (allInscriptions.length >= 10000) {
-          console.log('⚠️ Reached safety limit of 10,000 inscriptions');
+        // Safety limit: don't fetch more than 20,000 inscriptions
+        if (allInscriptions.length >= 20000) {
+          console.log('⚠️ Reached safety limit of 20,000 inscriptions');
           hasMore = false;
         }
       }
@@ -388,20 +383,21 @@ export default function ProfilePage() {
       console.log('✅ Using total count:', finalTotal);
       console.log('📦 Total fetched for display:', fetchedInscriptions.length);
       
-      // Transform Ordiscan format to match our expected format
+      // Transform Unisat format to match our expected format
+      // Unisat format: { inscriptionId, inscriptionNumber, address, contentType, ... }
       fetchedInscriptions = fetchedInscriptions.map((insc: any) => ({
-        id: insc.inscription_id,
-        number: insc.inscription_number,
+        id: insc.inscriptionId,
+        number: insc.inscriptionNumber,
         address: insc.address,
-        content_type: insc.content_type,
-        content_length: insc.content_length,
-        timestamp: new Date(insc.timestamp).getTime(),
-        tx_id: insc.genesis_transaction,
-        // Use ordinals.com content URLs for native rendering (HTML, 3D, images, etc.)
-        content: `https://ordinals.com/content/${insc.inscription_id}`,
-        // Additional metadata for better rendering
-        sat: insc.sat,
+        content_type: insc.contentType,
+        content_length: insc.contentLength,
+        timestamp: insc.timestamp,
+        tx_id: insc.genesisTransaction,
+        // Use ordinals.com content URLs for native rendering
+        content: `https://ordinals.com/content/${insc.inscriptionId}`,
+        // Additional metadata
         output: insc.output,
+        outputValue: insc.outputValue,
       }));
       
       // Sort based on user preference
