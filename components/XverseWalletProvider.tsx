@@ -49,6 +49,11 @@ export function XverseWalletProvider({ children }: { children: ReactNode }) {
     const savedOrdinalsAddress = localStorage.getItem('xverse_ordinals_address');
     const savedSparkAddress = localStorage.getItem('xverse_spark_address');
     
+    console.log('Loaded from localStorage:');
+    console.log('- Payment address:', savedAddress);
+    console.log('- Ordinals (Taproot) address:', savedOrdinalsAddress);
+    console.log('- Spark address:', savedSparkAddress);
+    
     if (savedAddress && savedOrdinalsAddress) {
       const initBalance = async () => {
         const balance = await fetchBalance(savedAddress);
@@ -195,6 +200,8 @@ export function XverseWalletProvider({ children }: { children: ReactNode }) {
       });
 
       if (response.status === 'success') {
+        console.log('Xverse getAccounts response:', response.result);
+        
         const ordinalsAccount = response.result.find(
           (account: any) => account.purpose === AddressPurpose.Ordinals
         );
@@ -204,6 +211,9 @@ export function XverseWalletProvider({ children }: { children: ReactNode }) {
 
         const ordinalsAddress = ordinalsAccount?.address || null;
         const paymentAddress = paymentAccount?.address || null;
+        
+        console.log('Ordinals (Taproot) address:', ordinalsAddress);
+        console.log('Payment (SegWit) address:', paymentAddress);
         
         // Request Spark address separately using dedicated Spark method
         // Spark is a Bitcoin L2 protocol, separate from Stacks
