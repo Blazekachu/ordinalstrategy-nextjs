@@ -294,38 +294,38 @@ export default function ProfilePage() {
     console.log('Fetching ALL inscriptions for Taproot address:', taprootAddr);
     setLoadingInscriptions(true);
     try {
-      // Using Unisat API - more reliable and complete inscription data
-      // Unisat powers many Bitcoin wallets and has comprehensive indexing
+      // Back to Ordiscan but with VERY aggressive pagination - fetch everything
+      // Ordiscan was rendering correctly, just missing some inscriptions
       let allInscriptions: any[] = [];
-      let cursor = 0;
-      const size = 100; // Unisat API works best with smaller batches
+      let offset = 0;
+      const limit = 100; // Smaller batches to avoid API limits
       let hasMore = true;
       let totalFromAPI = 0;
+      let consecutiveEmptyBatches = 0;
       
-      console.log('🔄 Starting paginated fetch with Unisat API...');
+      console.log('🔄 Starting aggressive paginated fetch with Ordiscan...');
       
-      // Paginate through ALL inscriptions
-      while (hasMore) {
-        console.log(`📥 Fetching batch: cursor=${cursor}, size=${size}`);
+      // Paginate through ALL inscriptions with safety checks
+      while (hasMore && offset < 50000) { // Hard limit at 50k offset
+        console.log(`📥 Fetching batch ${Math.floor(offset/limit) + 1}: offset=${offset}, limit=${limit}`);
         
         const response = await fetch(
-          `https://open-api.unisat.io/v1/indexer/address/${taprootAddr}/inscription-data?cursor=${cursor}&size=${size}`,
+          `https://api.ordiscan.com/v1/address/${taprootAddr}/inscriptions?limit=${limit}&offset=${offset}`,
           {
             headers: {
               'Accept': 'application/json',
-              'Authorization': 'Bearer ***REMOVED***',
+              'Authorization': `Bearer ***REMOVED***`,
             }
           }
         );
         
         if (!response.ok) {
-          console.error('Unisat API error:', response.status, response.statusText);
+          console.error(`❌ Ordiscan API error at offset ${offset}:`, response.status, response.statusText);
           
-          try {
-            const errorBody = await response.text();
-            console.error('Error body:', errorBody);
-          } catch (e) {
-            console.error('Could not read error body');
+          // If we get an error but already have some inscriptions, stop gracefully
+          if (allInscriptions.length > 0) {
+            console.log(`⚠️ Stopping early with ${allInscriptions.length} inscriptions due to API error`);
+            break;
           }
           
           throw new Error(`API returned ${response.status}`);
@@ -334,70 +334,76 @@ export default function ProfilePage() {
         const data = await response.json();
         
         // On first request, log the response structure
-        if (cursor === 0) {
-          console.log('📋 Unisat response structure:', JSON.stringify(data, null, 2));
-          console.log('🔑 Response data keys:', Object.keys(data));
+        if (offset === 0) {
+          console.log('📋 Response structure:', JSON.stringify(data, null, 2));
+          console.log('🔑 Response keys:', Object.keys(data));
           
-          // Unisat API format: { code: 0, msg: "ok", data: { total: X, inscription: [...] } }
-          totalFromAPI = data.data?.total || 0;
+          // Get total count from API
+          totalFromAPI = data.total || data.totalCount || data.count || 0;
           
-          console.log('📊 TOTAL inscriptions from API:', totalFromAPI);
+          console.log('📊 API says total:', totalFromAPI);
         }
         
-        const batchInscriptions = data.data?.inscription || [];
-        console.log(`✅ Fetched ${batchInscriptions.length} inscriptions in this batch`);
+        const batchInscriptions = data.data || data.results || [];
+        console.log(`✅ Batch ${Math.floor(offset/limit) + 1}: fetched ${batchInscriptions.length} inscriptions`);
         
         if (batchInscriptions.length === 0) {
-          console.log('🛑 No more inscriptions to fetch');
-          hasMore = false;
-          break;
+          consecutiveEmptyBatches++;
+          console.log(`⚠️ Empty batch #${consecutiveEmptyBatches}`);
+          
+          // If we get 3 consecutive empty batches, stop
+          if (consecutiveEmptyBatches >= 3) {
+            console.log('🛑 Stopping after 3 empty batches');
+            hasMore = false;
+            break;
+          }
+          
+          // Skip forward by limit to check if there are more
+          offset += limit;
+          continue;
         }
         
+        // Reset empty batch counter if we got results
+        consecutiveEmptyBatches = 0;
+        
+        // Add to all inscriptions
         allInscriptions = [...allInscriptions, ...batchInscriptions];
-        cursor += size;
+        offset += limit;
         
-        // Safety check: if we've fetched more than the total, stop
+        console.log(`📊 Total collected so far: ${allInscriptions.length}`);
+        
+        // Stop if we got less than limit (probably last page)
+        if (batchInscriptions.length < limit) {
+          console.log('🎯 Got partial batch - likely last page');
+          hasMore = false;
+        }
+        
+        // Also stop if we've reached the reported total
         if (totalFromAPI > 0 && allInscriptions.length >= totalFromAPI) {
-          console.log('🎯 Fetched all inscriptions based on total count');
-          hasMore = false;
-        }
-        
-        // Also stop if we got less than the size (last page)
-        if (batchInscriptions.length < size) {
-          console.log('🎯 Fetched last page (incomplete batch)');
-          hasMore = false;
-        }
-        
-        // Safety limit: don't fetch more than 20,000 inscriptions
-        if (allInscriptions.length >= 20000) {
-          console.log('⚠️ Reached safety limit of 20,000 inscriptions');
+          console.log(`🎯 Reached reported total of ${totalFromAPI}`);
           hasMore = false;
         }
       }
       
-      console.log(`🎉 TOTAL FETCHED: ${allInscriptions.length} inscriptions`);
+      console.log(`🎉 FINAL: Fetched ${allInscriptions.length} inscriptions`);
       
       let fetchedInscriptions = allInscriptions;
-      const finalTotal = totalFromAPI > 0 ? totalFromAPI : fetchedInscriptions.length;
+      const finalTotal = Math.max(totalFromAPI, fetchedInscriptions.length);
       
       console.log('✅ Using total count:', finalTotal);
-      console.log('📦 Total fetched for display:', fetchedInscriptions.length);
       
-      // Transform Unisat format to match our expected format
-      // Unisat format: { inscriptionId, inscriptionNumber, address, contentType, ... }
+      // Transform Ordiscan format
       fetchedInscriptions = fetchedInscriptions.map((insc: any) => ({
-        id: insc.inscriptionId,
-        number: insc.inscriptionNumber,
+        id: insc.inscription_id,
+        number: insc.inscription_number,
         address: insc.address,
-        content_type: insc.contentType,
-        content_length: insc.contentLength,
-        timestamp: insc.timestamp,
-        tx_id: insc.genesisTransaction,
-        // Use ordinals.com content URLs for native rendering
-        content: `https://ordinals.com/content/${insc.inscriptionId}`,
-        // Additional metadata
+        content_type: insc.content_type,
+        content_length: insc.content_length,
+        timestamp: new Date(insc.timestamp).getTime(),
+        tx_id: insc.genesis_transaction,
+        content: `https://ordinals.com/content/${insc.inscription_id}`,
+        sat: insc.sat,
         output: insc.output,
-        outputValue: insc.outputValue,
       }));
       
       // Sort based on user preference
