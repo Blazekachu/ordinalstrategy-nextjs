@@ -301,12 +301,11 @@ export default function ProfilePage() {
       const limit = 100; // Smaller batches to avoid API limits
       let hasMore = true;
       let totalFromAPI = 0;
-      let consecutiveEmptyBatches = 0;
       
-      console.log('🔄 Starting aggressive paginated fetch with Ordiscan...');
+      console.log('🔄 Starting paginated fetch with Ordiscan (with deduplication)...');
       
-      // Paginate through ALL inscriptions with safety checks
-      while (hasMore && offset < 50000) { // Hard limit at 50k offset
+      // Paginate through ALL inscriptions - SIMPLE approach
+      while (hasMore && offset < 10000) { // Hard limit at 10k offset
         console.log(`📥 Fetching batch ${Math.floor(offset/limit) + 1}: offset=${offset}, limit=${limit}`);
         
         const response = await fetch(
@@ -320,75 +319,63 @@ export default function ProfilePage() {
         );
         
         if (!response.ok) {
-          console.error(`❌ Ordiscan API error at offset ${offset}:`, response.status, response.statusText);
-          
-          // If we get an error but already have some inscriptions, stop gracefully
+          console.error(`❌ API error at offset ${offset}`);
           if (allInscriptions.length > 0) {
-            console.log(`⚠️ Stopping early with ${allInscriptions.length} inscriptions due to API error`);
+            console.log(`⚠️ Stopping with ${allInscriptions.length} inscriptions`);
             break;
           }
-          
           throw new Error(`API returned ${response.status}`);
         }
         
         const data = await response.json();
         
-        // On first request, log the response structure
+        // On first request, get total
         if (offset === 0) {
-          console.log('📋 Response structure:', JSON.stringify(data, null, 2));
-          console.log('🔑 Response keys:', Object.keys(data));
-          
-          // Get total count from API
+          console.log('📋 Response keys:', Object.keys(data));
           totalFromAPI = data.total || data.totalCount || data.count || 0;
-          
-          console.log('📊 API says total:', totalFromAPI);
+          console.log('📊 API total:', totalFromAPI);
         }
         
         const batchInscriptions = data.data || data.results || [];
-        console.log(`✅ Batch ${Math.floor(offset/limit) + 1}: fetched ${batchInscriptions.length} inscriptions`);
+        console.log(`✅ Batch ${Math.floor(offset/limit) + 1}: got ${batchInscriptions.length} inscriptions`);
         
+        // If empty, STOP immediately - no skipping forward
         if (batchInscriptions.length === 0) {
-          consecutiveEmptyBatches++;
-          console.log(`⚠️ Empty batch #${consecutiveEmptyBatches}`);
-          
-          // If we get 3 consecutive empty batches, stop
-          if (consecutiveEmptyBatches >= 3) {
-            console.log('🛑 Stopping after 3 empty batches');
-            hasMore = false;
-            break;
-          }
-          
-          // Skip forward by limit to check if there are more
-          offset += limit;
-          continue;
+          console.log('🛑 Empty batch - stopping');
+          hasMore = false;
+          break;
         }
         
-        // Reset empty batch counter if we got results
-        consecutiveEmptyBatches = 0;
-        
-        // Add to all inscriptions
+        // Add to collection
         allInscriptions = [...allInscriptions, ...batchInscriptions];
         offset += limit;
         
-        console.log(`📊 Total collected so far: ${allInscriptions.length}`);
+        console.log(`📊 Total so far: ${allInscriptions.length}`);
         
-        // Stop if we got less than limit (probably last page)
+        // Stop if partial batch (last page)
         if (batchInscriptions.length < limit) {
-          console.log('🎯 Got partial batch - likely last page');
+          console.log('🎯 Last page (partial batch)');
           hasMore = false;
         }
         
-        // Also stop if we've reached the reported total
+        // Stop if reached total
         if (totalFromAPI > 0 && allInscriptions.length >= totalFromAPI) {
-          console.log(`🎯 Reached reported total of ${totalFromAPI}`);
+          console.log(`🎯 Reached total of ${totalFromAPI}`);
           hasMore = false;
         }
       }
       
-      console.log(`🎉 FINAL: Fetched ${allInscriptions.length} inscriptions`);
+      console.log(`🎉 Fetched ${allInscriptions.length} inscriptions total`);
       
-      let fetchedInscriptions = allInscriptions;
-      const finalTotal = Math.max(totalFromAPI, fetchedInscriptions.length);
+      // DEDUPLICATE by inscription ID (critical!)
+      const uniqueInscriptions = Array.from(
+        new Map(allInscriptions.map(insc => [insc.inscription_id, insc])).values()
+      );
+      
+      console.log(`🔄 After deduplication: ${uniqueInscriptions.length} unique inscriptions`);
+      
+      let fetchedInscriptions = uniqueInscriptions;
+      const finalTotal = totalFromAPI > 0 ? totalFromAPI : fetchedInscriptions.length;
       
       console.log('✅ Using total count:', finalTotal);
       
