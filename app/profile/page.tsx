@@ -323,8 +323,13 @@ export default function ProfilePage() {
       setTotalInscriptionCount(data.total || 0);
     } catch (error) {
       console.error('Error fetching inscriptions:', error);
+      // If API fails, show a helpful message but don't set count to 0
+      // Keep existing count from user data if available
       setInscriptions([]);
-      setTotalInscriptionCount(0);
+      // Don't reset count to 0 if we already have a count from somewhere
+      if (totalInscriptionCount === 0 && userData?.inscriptionCount) {
+        setTotalInscriptionCount(userData.inscriptionCount);
+      }
     } finally {
       setLoadingInscriptions(false);
     }
@@ -1395,10 +1400,20 @@ export default function ProfilePage() {
                 ) : (
                   <div className="text-center py-12 bg-[#111317]/90 backdrop-blur-sm rounded-2xl border-2 border-[#f7931a]/20">
                     <div className="text-6xl mb-4">🎨</div>
-                    <div className="text-xl text-[#f7931a] mb-2">No Inscriptions Found</div>
-                    <div className="text-gray-400">
-                      Your taproot address doesn't have any inscriptions yet.
+                    <div className="text-xl text-[#f7931a] mb-2">Unable to Load Inscriptions</div>
+                    <div className="text-gray-400 mb-4">
+                      The inscription API is currently unavailable for this address.
                     </div>
+                    {taproot?.address && (
+                      <a
+                        href={`https://ordinals.com/address/${taproot.address}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-block bg-[#f7931a] text-[#0b0c10] px-6 py-3 rounded-lg font-semibold hover:bg-[#ffd166] transition-all"
+                      >
+                        View Inscriptions on Ordinals.com ↗
+                      </a>
+                    )}
                   </div>
                 )}
               </div>
