@@ -291,61 +291,102 @@ export default function ProfilePage() {
       return;
     }
     
-    console.log('Fetching inscriptions for Taproot address:', taprootAddr);
+    console.log('Fetching ALL inscriptions for Taproot address:', taprootAddr);
     setLoadingInscriptions(true);
     try {
-      // Using Ordiscan API - professional hosted Ordinals indexer
+      // Using Ordiscan API with pagination to fetch ALL inscriptions
       // API Docs: https://ordiscan.com/docs/api
-      // Note: We limit to 1000 inscriptions for display, but total count comes from API metadata
-      const response = await fetch(
-        `https://api.ordiscan.com/v1/address/${taprootAddr}/inscriptions?limit=1000`,
-        {
-          headers: {
-            'Accept': 'application/json',
-            'Authorization': `Bearer ***REMOVED***`,
+      let allInscriptions: any[] = [];
+      let offset = 0;
+      const limit = 500; // Fetch 500 at a time for efficiency
+      let hasMore = true;
+      let totalFromAPI = 0;
+      
+      console.log('🔄 Starting paginated fetch...');
+      
+      // Paginate through ALL inscriptions
+      while (hasMore) {
+        console.log(`📥 Fetching batch: offset=${offset}, limit=${limit}`);
+        
+        const response = await fetch(
+          `https://api.ordiscan.com/v1/address/${taprootAddr}/inscriptions?limit=${limit}&offset=${offset}`,
+          {
+            headers: {
+              'Accept': 'application/json',
+              'Authorization': `Bearer ***REMOVED***`,
+            }
           }
-        }
-      );
-      
-      console.log('Ordiscan API response status:', response.status);
-      
-      if (!response.ok) {
-        console.error('Ordiscan API error:', response.status, response.statusText);
+        );
         
-        // Try to get error details from response body
-        try {
-          const errorBody = await response.text();
-          console.error('Error body:', errorBody);
-        } catch (e) {
-          console.error('Could not read error body');
+        if (!response.ok) {
+          console.error('Ordiscan API error:', response.status, response.statusText);
+          
+          try {
+            const errorBody = await response.text();
+            console.error('Error body:', errorBody);
+          } catch (e) {
+            console.error('Could not read error body');
+          }
+          
+          throw new Error(`API returned ${response.status}`);
         }
         
-        throw new Error(`API returned ${response.status}`);
-      }
-      
-      const data = await response.json();
-      console.log('Inscriptions response from Ordiscan:', data);
-      console.log('Full response structure:', JSON.stringify(data, null, 2));
-      
-      // Ordiscan API format can vary - try multiple paths for total count
-      let fetchedInscriptions = data.data || data.results || [];
-      
-      // Try different possible locations for total count
-      // IMPORTANT: This should be the ACTUAL total, not just what we fetched
-      const totalCount = data.total || 
+        const data = await response.json();
+        
+        // On first request, log the response structure
+        if (offset === 0) {
+          console.log('📋 First batch response structure:', JSON.stringify(data, null, 2));
+          console.log('🔑 Response data keys:', Object.keys(data));
+          
+          // Get total count from API metadata
+          totalFromAPI = data.total || 
                         data.totalCount || 
                         data.count || 
                         data.pagination?.total ||
                         data.meta?.total ||
-                        0; // Don't fallback to array length - we want the real total!
+                        0;
+          
+          console.log('📊 TOTAL inscriptions from API:', totalFromAPI);
+        }
+        
+        const batchInscriptions = data.data || data.results || [];
+        console.log(`✅ Fetched ${batchInscriptions.length} inscriptions in this batch`);
+        
+        if (batchInscriptions.length === 0) {
+          console.log('🛑 No more inscriptions to fetch');
+          hasMore = false;
+          break;
+        }
+        
+        allInscriptions = [...allInscriptions, ...batchInscriptions];
+        offset += limit;
+        
+        // Safety check: if we've fetched more than the total, stop
+        if (totalFromAPI > 0 && allInscriptions.length >= totalFromAPI) {
+          console.log('🎯 Fetched all inscriptions based on total count');
+          hasMore = false;
+        }
+        
+        // Also stop if we got less than the limit (last page)
+        if (batchInscriptions.length < limit) {
+          console.log('🎯 Fetched last page (incomplete batch)');
+          hasMore = false;
+        }
+        
+        // Safety limit: don't fetch more than 10,000 inscriptions
+        if (allInscriptions.length >= 10000) {
+          console.log('⚠️ Reached safety limit of 10,000 inscriptions');
+          hasMore = false;
+        }
+      }
       
-      console.log('📊 ACTUAL total inscriptions (from API):', totalCount);
-      console.log('📦 Fetched for display (limited):', fetchedInscriptions.length);
-      console.log('🔑 Response data keys:', Object.keys(data));
+      console.log(`🎉 TOTAL FETCHED: ${allInscriptions.length} inscriptions`);
       
-      // If API doesn't provide total, calculate from fetched (only as last resort)
-      const finalTotal = totalCount > 0 ? totalCount : fetchedInscriptions.length;
+      let fetchedInscriptions = allInscriptions;
+      const finalTotal = totalFromAPI > 0 ? totalFromAPI : fetchedInscriptions.length;
+      
       console.log('✅ Using total count:', finalTotal);
+      console.log('📦 Total fetched for display:', fetchedInscriptions.length);
       
       // Transform Ordiscan format to match our expected format
       fetchedInscriptions = fetchedInscriptions.map((insc: any) => ({
