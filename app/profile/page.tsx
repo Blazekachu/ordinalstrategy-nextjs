@@ -56,8 +56,6 @@ export default function ProfilePage() {
   const [inscriptions, setInscriptions] = useState<any[]>([]);
   const [totalInscriptionCount, setTotalInscriptionCount] = useState<number>(0);
   const [loadingInscriptions, setLoadingInscriptions] = useState(false);
-  const [inscriptionPage, setInscriptionPage] = useState(1);
-  const [inscriptionsPerPage, setInscriptionsPerPage] = useState(10);
   const [inscriptionViewMode, setInscriptionViewMode] = useState<'grid-large' | 'grid-small' | 'list'>('grid-large');
   const [inscriptionSortOrder, setInscriptionSortOrder] = useState<'latest' | 'oldest'>('latest');
   const [leaderboardData, setLeaderboardData] = useState<any[]>([]);
@@ -624,27 +622,9 @@ export default function ProfilePage() {
     return `${mins}m ${secs}s`;
   };
 
-  // Pagination helpers for inscriptions
-  const getPaginatedInscriptions = () => {
-    const startIndex = (inscriptionPage - 1) * inscriptionsPerPage;
-    const endIndex = startIndex + inscriptionsPerPage;
-    return inscriptions.slice(startIndex, endIndex);
-  };
-
-  const getTotalPages = () => {
-    return Math.ceil(inscriptions.length / inscriptionsPerPage);
-  };
-
+  // View mode handler for inscriptions (no pagination needed)
   const handleViewModeChange = (mode: 'grid-large' | 'grid-small' | 'list') => {
     setInscriptionViewMode(mode);
-    // When switching to list view, set per page to 50
-    if (mode === 'list') {
-      setInscriptionsPerPage(50);
-    } else if (inscriptionsPerPage === 50) {
-      // If coming from list view, reset to 10
-      setInscriptionsPerPage(10);
-    }
-    setInscriptionPage(1);
   };
 
   if (walletLoading) {
@@ -1331,25 +1311,6 @@ export default function ProfilePage() {
                           </div>
                         </div>
 
-                        {/* Per Page Selector (hidden in list view) */}
-                        {inscriptionViewMode !== 'list' && (
-                          <div className="flex-1">
-                            <label className="text-sm text-gray-400 mb-2 block">Per Page</label>
-                            <select
-                              value={inscriptionsPerPage}
-                              onChange={(e) => {
-                                setInscriptionsPerPage(Number(e.target.value));
-                                setInscriptionPage(1);
-                              }}
-                              className="w-full px-4 py-2 bg-black/40 text-white rounded-lg border border-gray-700 focus:border-[#f7931a] focus:outline-none"
-                            >
-                              <option value={10}>10</option>
-                              <option value={20}>20</option>
-                              <option value={50}>50</option>
-                            </select>
-                          </div>
-                        )}
-
                         {/* Sort Order Selector */}
                         <div className="flex-1">
                           <label className="text-sm text-gray-400 mb-2 block">Sort By</label>
@@ -1376,7 +1337,7 @@ export default function ProfilePage() {
                     {/* Grid View (Large) */}
                     {inscriptionViewMode === 'grid-large' && (
                       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-                        {getPaginatedInscriptions().map((inscription: any) => (
+                        {inscriptions.map((inscription: any) => (
                       <div
                         key={inscription.id}
                         className="group bg-gradient-to-br from-[#111317]/90 to-[#1b1c1f]/90 backdrop-blur-sm rounded-2xl border-2 border-[#f7931a]/20 hover:border-[#f7931a]/60 hover:shadow-[0_10px_40px_rgba(247,147,26,0.2)] hover:-translate-y-1 transition-all duration-300 overflow-hidden"
@@ -1504,7 +1465,7 @@ export default function ProfilePage() {
                     {/* Grid View (Small) */}
                     {inscriptionViewMode === 'grid-small' && (
                       <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 xl:grid-cols-8 gap-3">
-                        {getPaginatedInscriptions().map((inscription: any) => (
+                        {inscriptions.map((inscription: any) => (
                           <div
                             key={inscription.id}
                             className="group bg-gradient-to-br from-[#111317]/90 to-[#1b1c1f]/90 backdrop-blur-sm rounded-lg border-2 border-[#f7931a]/20 hover:border-[#f7931a]/60 hover:shadow-[0_5px_20px_rgba(247,147,26,0.2)] hover:-translate-y-1 transition-all duration-300 overflow-hidden"
@@ -1613,62 +1574,6 @@ export default function ProfilePage() {
                       </div>
                     )}
 
-                    {/* Pagination Controls */}
-                    {inscriptions.length > inscriptionsPerPage && (
-                      <div className="flex flex-col sm:flex-row items-center justify-between gap-4 bg-gradient-to-br from-[#111317]/90 to-[#1b1c1f]/90 backdrop-blur-sm p-4 rounded-2xl border-2 border-[#f7931a]/20">
-                        {/* Page Info */}
-                        <div className="text-gray-400 text-sm">
-                          Showing {(inscriptionPage - 1) * inscriptionsPerPage + 1} - {Math.min(inscriptionPage * inscriptionsPerPage, inscriptions.length)} of {inscriptions.length}
-                        </div>
-
-                        {/* Page Numbers */}
-                        <div className="flex items-center gap-2">
-                          <button
-                            onClick={() => setInscriptionPage(Math.max(1, inscriptionPage - 1))}
-                            disabled={inscriptionPage === 1}
-                            className="px-4 py-2 bg-black/40 text-white rounded-lg font-semibold hover:bg-[#f7931a] hover:text-[#0b0c10] transition-all disabled:opacity-30 disabled:cursor-not-allowed disabled:hover:bg-black/40 disabled:hover:text-white"
-                          >
-                            ← Prev
-                          </button>
-
-                          {/* Page Numbers */}
-                          {Array.from({ length: Math.min(5, getTotalPages()) }, (_, i) => {
-                            let pageNum;
-                            if (getTotalPages() <= 5) {
-                              pageNum = i + 1;
-                            } else if (inscriptionPage <= 3) {
-                              pageNum = i + 1;
-                            } else if (inscriptionPage >= getTotalPages() - 2) {
-                              pageNum = getTotalPages() - 4 + i;
-                            } else {
-                              pageNum = inscriptionPage - 2 + i;
-                            }
-                            
-                            return (
-                              <button
-                                key={pageNum}
-                                onClick={() => setInscriptionPage(pageNum)}
-                                className={`px-4 py-2 rounded-lg font-semibold transition-all ${
-                                  inscriptionPage === pageNum
-                                    ? 'bg-[#f7931a] text-[#0b0c10]'
-                                    : 'bg-black/40 text-white hover:bg-black/60'
-                                }`}
-                              >
-                                {pageNum}
-                              </button>
-                            );
-                          })}
-
-                          <button
-                            onClick={() => setInscriptionPage(Math.min(getTotalPages(), inscriptionPage + 1))}
-                            disabled={inscriptionPage === getTotalPages()}
-                            className="px-4 py-2 bg-black/40 text-white rounded-lg font-semibold hover:bg-[#f7931a] hover:text-[#0b0c10] transition-all disabled:opacity-30 disabled:cursor-not-allowed disabled:hover:bg-black/40 disabled:hover:text-white"
-                          >
-                            Next →
-                          </button>
-                        </div>
-                      </div>
-                    )}
                   </>
                 ) : (
                   <div className="text-center py-12 bg-[#111317]/90 backdrop-blur-sm rounded-2xl border-2 border-[#f7931a]/20">
