@@ -52,6 +52,7 @@ export function XverseWalletProvider({ children }: { children: ReactNode }) {
     if (savedAddress && savedOrdinalsAddress) {
       const initBalance = async () => {
         const balance = await fetchBalance(savedAddress);
+        const taprootBalance = savedOrdinalsAddress ? await fetchBalance(savedOrdinalsAddress) : null;
         const sparkBalance = savedSparkAddress ? await fetchBalance(savedSparkAddress, true) : null;
         setWalletState(prev => ({
           ...prev,
@@ -61,7 +62,7 @@ export function XverseWalletProvider({ children }: { children: ReactNode }) {
           sparkAddress: savedSparkAddress,
           balance,
           nativeSegwit: { address: savedAddress, balance },
-          taproot: { address: savedOrdinalsAddress, balance: null },
+          taproot: { address: savedOrdinalsAddress, balance: taprootBalance },
           spark: savedSparkAddress ? { address: savedSparkAddress, balance: sparkBalance } : null,
           loading: false,
         }));

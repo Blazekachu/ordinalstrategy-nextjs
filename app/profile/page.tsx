@@ -54,6 +54,7 @@ export default function ProfilePage() {
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<'profile' | 'addresses' | 'games' | 'leaderboard' | 'inscriptions'>('profile');
   const [inscriptions, setInscriptions] = useState<any[]>([]);
+  const [totalInscriptionCount, setTotalInscriptionCount] = useState<number>(0);
   const [loadingInscriptions, setLoadingInscriptions] = useState(false);
   const [leaderboardData, setLeaderboardData] = useState<any[]>([]);
   const [leaderboardSort, setLeaderboardSort] = useState<'highScore' | 'gamesPlayed' | 'avgScore'>('highScore');
@@ -236,7 +237,7 @@ export default function ProfilePage() {
           nativeSegwitAddress: nativeSegwit?.address,
           taprootAddress: taproot?.address,
           sparkAddress: spark?.address,
-          inscriptionCount: inscriptions.length,
+          inscriptionCount: totalInscriptionCount,
         }),
       });
 
@@ -268,15 +269,18 @@ export default function ProfilePage() {
     
     setLoadingInscriptions(true);
     try {
-      // Try Hiro API first
+      // Try Hiro API first - fetch up to 60 for display, but get total count
       const response = await fetch(
         `https://api.hiro.so/ordinals/v1/inscriptions?address=${ordinalsAddress}&limit=60`
       );
       const data = await response.json();
       setInscriptions(data.results || []);
+      // Hiro API returns the total count in the response
+      setTotalInscriptionCount(data.total || data.results?.length || 0);
     } catch (error) {
       console.error('Error fetching inscriptions:', error);
       setInscriptions([]);
+      setTotalInscriptionCount(0);
     } finally {
       setLoadingInscriptions(false);
     }
@@ -424,7 +428,7 @@ export default function ProfilePage() {
                   </div>
                 )}
                 <div className="bg-black/40 px-4 py-2 rounded-xl border border-[#f7931a]/20 hover:border-[#f7931a]/50 transition-colors">
-                  <span className="text-[#ffd166] font-bold text-xl md:text-2xl block">{inscriptions.length || userData?.inscriptionCount || 0}</span>
+                  <span className="text-[#ffd166] font-bold text-xl md:text-2xl block">{totalInscriptionCount || userData?.inscriptionCount || 0}</span>
                   <span className="text-xs opacity-80">Inscriptions</span>
                 </div>
               </div>
@@ -581,7 +585,7 @@ export default function ProfilePage() {
                     </div>
                     <div className="flex items-center justify-between py-3">
                       <span className="text-gray-400">Inscriptions</span>
-                      <span className="text-[#ffd166] font-bold text-xl">{inscriptions.length || userData?.inscriptionCount || 0}</span>
+                      <span className="text-[#ffd166] font-bold text-xl">{totalInscriptionCount || userData?.inscriptionCount || 0}</span>
                     </div>
                   </div>
 
@@ -764,7 +768,7 @@ export default function ProfilePage() {
                       </div>
                       <div className="text-right">
                         <div className="text-2xl font-bold text-[#ffd166]">
-                          {inscriptions.length || userData?.inscriptionCount || 0}
+                          {totalInscriptionCount || userData?.inscriptionCount || 0}
                         </div>
                         <div className="text-xs text-gray-400">Inscriptions</div>
                       </div>
