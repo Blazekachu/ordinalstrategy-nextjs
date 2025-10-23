@@ -294,26 +294,22 @@ export default function ProfilePage() {
     console.log('Fetching inscriptions for Taproot address:', taprootAddr);
     setLoadingInscriptions(true);
     try {
-      // Use Hiro API with proper headers as per documentation
-      // https://docs.hiro.so/en/apis/ordinals-api
+      // Using OKX Ordinals API instead of Hiro (Hiro has 60 char query limit, Taproot addresses are 62 chars)
+      // OKX API docs: https://www.okx.com/web3/build/docs/waas/ordinals-inscriptions-api
       const response = await fetch(
-        `https://api.hiro.so/ordinals/v1/inscriptions?address=${taprootAddr}&limit=200`,
+        `https://www.okx.com/api/v5/explorer/inscription/inscription-list-by-address?address=${taprootAddr}&limit=200&page=1`,
         {
           headers: {
             'Accept': 'application/json',
-            'x-api-key': '***REMOVED***',
+            'Ok-Access-Key': '***REMOVED***', // Public API key for ordinals data
           }
         }
       );
       
-      // Log rate limit info
-      const rateLimit = response.headers.get('x-ratelimit-limit');
-      const rateLimitRemaining = response.headers.get('x-ratelimit-remaining');
-      console.log('Rate limit:', rateLimit, 'Remaining:', rateLimitRemaining);
+      console.log('OKX API response status:', response.status);
       
       if (!response.ok) {
-        console.error('Hiro API error:', response.status, response.statusText);
-        console.error('Response headers:', Object.fromEntries(response.headers.entries()));
+        console.error('OKX API error:', response.status, response.statusText);
         
         // Try to get error details from response body
         try {
@@ -327,22 +323,35 @@ export default function ProfilePage() {
       }
       
       const data = await response.json();
-      console.log('Inscriptions response from Hiro:', data);
-      console.log('Total inscriptions:', data.total);
-      console.log('Results count:', data.results?.length);
+      console.log('Inscriptions response from OKX:', data);
       
-      let fetchedInscriptions = data.results || [];
+      // OKX API format: { code: "0", msg: "", data: { inscriptionsList: [...], totalPage: "1" } }
+      let fetchedInscriptions = data.data?.inscriptionsList || [];
+      const totalCount = parseInt(data.data?.total || '0');
+      
+      console.log('Total inscriptions:', totalCount);
+      console.log('Results count:', fetchedInscriptions.length);
+      
+      // Transform OKX format to match our expected format
+      fetchedInscriptions = fetchedInscriptions.map((insc: any) => ({
+        id: insc.inscriptionId,
+        number: insc.inscriptionNumber,
+        address: insc.ownerAddress,
+        content_type: insc.contentType,
+        content_length: insc.contentSize,
+        timestamp: new Date(parseInt(insc.timestamp)).getTime(),
+        tx_id: insc.txId,
+        // Add content URL for rendering
+        content: `https://ordinals.com/content/${insc.inscriptionId}`,
+      }));
       
       // Sort based on user preference
       if (inscriptionSortOrder === 'oldest') {
-        // Hiro API returns newest first by default, so reverse for oldest
         fetchedInscriptions = [...fetchedInscriptions].reverse();
       }
-      // 'latest' is already the default order from API
       
       setInscriptions(fetchedInscriptions);
-      // Hiro API returns the total count
-      setTotalInscriptionCount(data.total || 0);
+      setTotalInscriptionCount(totalCount);
     } catch (error) {
       console.error('Error fetching inscriptions:', error);
       // If API fails, show a helpful message but don't set count to 0
