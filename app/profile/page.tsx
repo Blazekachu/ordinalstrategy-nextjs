@@ -369,7 +369,7 @@ export default function ProfilePage() {
                   <h1 className="text-2xl md:text-3xl font-bold text-[#f7931a] drop-shadow-[0_0_20px_rgba(247,147,26,0.5)]">
                     {userData?.username || (spark?.address && `${spark.address.slice(0, 8)}...${spark.address.slice(-8)}`)}
               </h1>
-                  <span className="text-2xl">⚡</span>
+                  <span className="text-2xl text-[#f7931a]">*</span>
                   <button
                     onClick={() => setShowEditProfile(true)}
                     className="bg-[#f7931a]/20 hover:bg-[#f7931a]/40 border border-[#f7931a]/50 px-3 py-1 rounded-lg text-xs font-semibold transition-all"
