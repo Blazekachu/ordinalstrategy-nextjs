@@ -141,7 +141,10 @@ export default function ProfilePage() {
   }, [connected, address, walletLoading]);
 
   useEffect(() => {
+    console.log('Tab changed to:', activeTab, 'ordinalsAddress:', ordinalsAddress);
+    
     if (activeTab === 'inscriptions' && ordinalsAddress) {
+      console.log('Triggering fetchInscriptions...');
       fetchInscriptions();
       setInscriptionPage(1); // Reset to page 1 when sort changes
     }
@@ -277,8 +280,12 @@ export default function ProfilePage() {
   };
 
   const fetchInscriptions = async () => {
-    if (!ordinalsAddress) return;
+    if (!ordinalsAddress) {
+      console.log('No ordinals address available for fetching inscriptions');
+      return;
+    }
     
+    console.log('Fetching inscriptions for address:', ordinalsAddress);
     setLoadingInscriptions(true);
     try {
       // Fetch more inscriptions to support pagination - get up to 200
@@ -286,6 +293,7 @@ export default function ProfilePage() {
         `https://api.hiro.so/ordinals/v1/inscriptions?address=${ordinalsAddress}&limit=200`
       );
       const data = await response.json();
+      console.log('Inscriptions response:', data);
       
       let fetchedInscriptions = data.results || [];
       
@@ -409,7 +417,7 @@ export default function ProfilePage() {
               <div className="absolute inset-0 bg-[#f7931a] rounded-full blur-xl opacity-40 animate-pulse"></div>
               <div className="relative w-28 h-28 md:w-32 md:h-32 bg-gradient-to-br from-[#f7931a] to-[#ffd166] rounded-full flex items-center justify-center text-5xl md:text-6xl font-bold text-[#0b0c10] shadow-2xl border-4 border-[#ffd166]/50">
                 ₿
-              </div>
+            </div>
             </div>
             
             <div className="flex-1 text-center md:text-left">
@@ -527,7 +535,7 @@ export default function ProfilePage() {
                         (e.target as HTMLImageElement).style.display = 'none';
                       }}
                     />
-                  </div>
+              </div>
                 )}
 
                 {profileSaveMessage && (
@@ -537,7 +545,7 @@ export default function ProfilePage() {
                       : 'bg-red-500/20 border border-red-500/50 text-red-400'
                   }`}>
                     {profileSaveMessage.text}
-                  </div>
+            </div>
                 )}
 
                 <div className="flex gap-3 pt-4">
@@ -557,8 +565,8 @@ export default function ProfilePage() {
                   >
                     Cancel
                   </button>
-                </div>
-              </div>
+          </div>
+        </div>
             </div>
           </div>
         )}
@@ -811,11 +819,19 @@ export default function ProfilePage() {
                           {taproot.address}
                         </div>
                       </div>
-                      <div className="text-right">
-                        <div className="text-2xl font-bold text-[#ffd166]">
-                          {totalInscriptionCount || userData?.inscriptionCount || 0}
+                      <div className="text-right flex gap-6">
+                        <div>
+                          <div className="text-2xl font-bold text-purple-400">
+                            {taproot.balance !== null ? taproot.balance.toFixed(8) : '...'}
+                          </div>
+                          <div className="text-xs text-gray-400">BTC Balance</div>
                         </div>
-                        <div className="text-xs text-gray-400">Inscriptions</div>
+                        <div>
+                          <div className="text-2xl font-bold text-[#ffd166]">
+                            {totalInscriptionCount || userData?.inscriptionCount || 0}
+                          </div>
+                          <div className="text-xs text-gray-400">Inscriptions</div>
+                        </div>
                       </div>
                     </div>
                   </div>
@@ -843,9 +859,9 @@ export default function ProfilePage() {
                     <div className="relative">
                       <div className="text-[#f7931a] text-xs md:text-sm mb-2 uppercase tracking-wider font-semibold">Best Score</div>
                       <div className="text-3xl md:text-4xl font-bold text-white">
-                        {scores.length > 0 ? Math.max(...scores.map(s => s.score)).toLocaleString() : 0}
-                      </div>
-                    </div>
+                    {scores.length > 0 ? Math.max(...scores.map(s => s.score)).toLocaleString() : 0}
+                  </div>
+                </div>
                   </div>
                   <div className="group bg-gradient-to-br from-[#111317]/90 to-[#1b1c1f]/90 backdrop-blur-sm p-6 rounded-2xl border-2 border-[#f7931a]/20 hover:border-[#f7931a]/60 hover:shadow-[0_10px_40px_rgba(247,147,26,0.2)] hover:-translate-y-1 transition-all duration-300 relative overflow-hidden">
                     <div className="absolute top-0 right-0 text-6xl opacity-10 group-hover:opacity-20 transition-opacity">📊</div>
@@ -873,7 +889,7 @@ export default function ProfilePage() {
                       <div className="text-[#f7931a] text-xs md:text-sm mb-2 uppercase tracking-wider font-semibold">Total Play Time</div>
                       <div className="text-3xl md:text-4xl font-bold text-white">
                     {formatTime(scores.reduce((sum, s) => sum + (s.playTime || 0), 0))}
-                      </div>
+                  </div>
                     </div>
                   </div>
                 </div>
@@ -1259,7 +1275,7 @@ export default function ProfilePage() {
                     {inscriptionViewMode === 'list' && (
                       <div className="bg-gradient-to-br from-[#111317]/90 to-[#1b1c1f]/90 backdrop-blur-sm rounded-2xl border-2 border-[#f7931a]/20 overflow-hidden">
                         <div className="overflow-x-auto">
-                          <table className="w-full">
+                <table className="w-full">
                             <thead className="bg-[#1b1c1f]/50">
                               <tr>
                                 <th className="px-4 py-3 text-left text-[#f7931a] font-semibold text-sm">#</th>
@@ -1267,9 +1283,9 @@ export default function ProfilePage() {
                                 <th className="px-4 py-3 text-left text-[#f7931a] font-semibold text-sm">Type</th>
                                 <th className="px-4 py-3 text-left text-[#f7931a] font-semibold text-sm">Size</th>
                                 <th className="px-4 py-3 text-left text-[#f7931a] font-semibold text-sm">Action</th>
-                              </tr>
-                            </thead>
-                            <tbody>
+                    </tr>
+                  </thead>
+                  <tbody>
                               {getPaginatedInscriptions().map((inscription: any, index) => (
                                 <tr
                                   key={inscription.id}
@@ -1277,10 +1293,10 @@ export default function ProfilePage() {
                                 >
                                   <td className="px-4 py-3 text-white font-bold">
                                     #{inscription.number?.toLocaleString() || 'N/A'}
-                                  </td>
+                        </td>
                                   <td className="px-4 py-3 text-gray-300 font-mono text-sm">
                                     {inscription.id.slice(0, 12)}...{inscription.id.slice(-8)}
-                                  </td>
+                        </td>
                                   <td className="px-4 py-3 text-gray-400 text-sm">
                                     {inscription.content_type?.split('/')[1]?.toUpperCase() || 'Unknown'}
                                   </td>
@@ -1297,10 +1313,10 @@ export default function ProfilePage() {
                                       View ↗
                                     </a>
                                   </td>
-                                </tr>
-                              ))}
-                            </tbody>
-                          </table>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
                         </div>
                       </div>
                     )}
