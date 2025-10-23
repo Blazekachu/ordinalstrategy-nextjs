@@ -147,7 +147,6 @@ export default function ProfilePage() {
     if (activeTab === 'inscriptions' && (taproot?.address || ordinalsAddress)) {
       console.log('Triggering fetchInscriptions...');
       fetchInscriptions();
-      setInscriptionPage(1); // Reset to page 1 when sort changes
     }
     
     // Refresh user data and scores when switching to games tab
