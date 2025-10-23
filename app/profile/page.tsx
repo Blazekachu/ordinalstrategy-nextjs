@@ -367,9 +367,9 @@ export default function ProfilePage() {
               <div className="flex flex-col items-center md:items-start gap-2 mb-3">
                 <div className="flex items-center gap-2 flex-wrap">
                   <h1 className="text-2xl md:text-3xl font-bold text-[#f7931a] drop-shadow-[0_0_20px_rgba(247,147,26,0.5)]">
-                    {userData?.username || (address && `${address.slice(0, 8)}...${address.slice(-8)}`)}
+                    {userData?.username || (spark?.address && `${spark.address.slice(0, 8)}...${spark.address.slice(-8)}`)}
               </h1>
-                  <span className="text-2xl">🎮</span>
+                  <span className="text-2xl">⚡</span>
                   <button
                     onClick={() => setShowEditProfile(true)}
                     className="bg-[#f7931a]/20 hover:bg-[#f7931a]/40 border border-[#f7931a]/50 px-3 py-1 rounded-lg text-xs font-semibold transition-all"
@@ -377,9 +377,30 @@ export default function ProfilePage() {
                     ✏️ Edit
                   </button>
                 </div>
-                {balance !== null && (
-                  <div className="bg-black/60 px-4 py-2 rounded-lg border border-[#f7931a]/30">
-                    <span className="text-[#ffd166] font-bold text-lg md:text-xl">{balance.toFixed(8)} BTC</span>
+                
+                {/* Primary Spark Address */}
+                {spark?.address && (
+                  <div className="flex items-center gap-2 bg-blue-500/10 px-4 py-2 rounded-lg border border-blue-500/30">
+                    <span className="text-blue-400 font-mono text-xs md:text-sm">
+                      {spark.address.slice(0, 12)}...{spark.address.slice(-12)}
+                    </span>
+                    <button
+                      onClick={() => {
+                        navigator.clipboard.writeText(spark.address);
+                      }}
+                      className="text-blue-400 hover:text-blue-300 transition-colors"
+                    >
+                      📋
+                    </button>
+                    <span className="text-blue-300 text-xs font-semibold px-2 py-0.5 bg-blue-500/20 rounded">Spark L2</span>
+                  </div>
+                )}
+                
+                {/* Spark Balance */}
+                {spark?.balance !== null && spark?.balance !== undefined && (
+                  <div className="bg-gradient-to-r from-blue-500/20 to-blue-600/20 px-4 py-2 rounded-lg border border-blue-500/30">
+                    <span className="text-blue-300 font-bold text-lg md:text-xl">{spark.balance.toFixed(8)} BTC</span>
+                    <span className="text-blue-400 text-xs ml-2">on Spark L2</span>
                   </div>
                 )}
               </div>
@@ -396,6 +417,12 @@ export default function ProfilePage() {
                   <span className="text-[#ffd166] font-bold text-xl md:text-2xl block">{userData?.highScore?.toLocaleString() || 0}</span>
                   <span className="text-xs opacity-80">High Score</span>
                 </div>
+                {nativeSegwit?.balance !== null && nativeSegwit?.balance !== undefined && (
+                  <div className="bg-black/40 px-4 py-2 rounded-xl border border-orange-500/20 hover:border-orange-500/50 transition-colors">
+                    <span className="text-orange-300 font-bold text-xl md:text-2xl block">{nativeSegwit.balance.toFixed(8)}</span>
+                    <span className="text-xs opacity-80">SegWit BTC</span>
+                  </div>
+                )}
                 <div className="bg-black/40 px-4 py-2 rounded-xl border border-[#f7931a]/20 hover:border-[#f7931a]/50 transition-colors">
                   <span className="text-[#ffd166] font-bold text-xl md:text-2xl block">{inscriptions.length || userData?.inscriptionCount || 0}</span>
                   <span className="text-xs opacity-80">Inscriptions</span>
@@ -647,53 +674,15 @@ export default function ProfilePage() {
             {/* Addresses & Sats Tab */}
             {activeTab === 'addresses' && (
               <div className="space-y-6">
-                {/* Native SegWit */}
-                {nativeSegwit && (
-                  <div className="group bg-gradient-to-br from-[#111317]/90 to-[#1b1c1f]/90 backdrop-blur-sm p-6 rounded-2xl border-2 border-[#f7931a]/20 hover:border-[#f7931a]/60 hover:shadow-[0_10px_40px_rgba(247,147,26,0.2)] transition-all duration-300">
-                    <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-                      <div className="flex-1">
-                        <div className="text-[#f7931a] text-sm mb-2 uppercase tracking-wider font-semibold flex items-center gap-2">
-                          <span className="text-2xl">🔐</span>
-                          Native SegWit (bc1q...)
-                        </div>
-                        <div className="text-white font-mono text-sm break-all bg-black/40 p-3 rounded-lg">
-                          {nativeSegwit.address}
-                        </div>
-                      </div>
-                      <div className="text-right">
-                        <div className="text-3xl font-bold text-[#ffd166]">
-                          {nativeSegwit.balance !== null ? nativeSegwit.balance.toFixed(8) : '...'}
-                        </div>
-                        <div className="text-sm text-gray-400">BTC</div>
-                      </div>
-                    </div>
-                  </div>
-                )}
+                {/* Info Banner */}
+                <div className="bg-blue-500/10 border border-blue-500/30 rounded-xl p-4">
+                  <p className="text-blue-300 text-sm">
+                    <span className="font-bold">⚡ Spark L2</span> is your primary address for all operations. 
+                    SegWit and Taproot addresses are shown for balance and inscription tracking only.
+                  </p>
+                </div>
 
-                {/* Taproot */}
-                {taproot && (
-                  <div className="group bg-gradient-to-br from-[#111317]/90 to-[#1b1c1f]/90 backdrop-blur-sm p-6 rounded-2xl border-2 border-[#f7931a]/20 hover:border-[#f7931a]/60 hover:shadow-[0_10px_40px_rgba(247,147,26,0.2)] transition-all duration-300">
-                    <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-                      <div className="flex-1">
-                        <div className="text-[#f7931a] text-sm mb-2 uppercase tracking-wider font-semibold flex items-center gap-2">
-                          <span className="text-2xl">🎨</span>
-                          Taproot / Ordinals (bc1p...)
-                        </div>
-                        <div className="text-white font-mono text-sm break-all bg-black/40 p-3 rounded-lg">
-                          {taproot.address}
-                        </div>
-                      </div>
-                      <div className="text-right">
-                        <div className="text-3xl font-bold text-[#ffd166]">
-                          {taproot.balance !== null ? taproot.balance.toFixed(8) : '...'}
-                        </div>
-                        <div className="text-sm text-gray-400">BTC</div>
-                      </div>
-                    </div>
-                  </div>
-                )}
-
-                {/* Spark (Bitcoin L2) */}
+                {/* Spark (Bitcoin L2) - PRIMARY */}
                 {spark && (
                   <div className="group bg-gradient-to-br from-[#111317]/90 to-[#1b1c1f]/90 backdrop-blur-sm p-6 rounded-2xl border-2 border-blue-500/20 hover:border-blue-500/60 hover:shadow-[0_10px_40px_rgba(59,130,246,0.2)] transition-all duration-300">
                     <div className="flex flex-col gap-4">
@@ -734,6 +723,58 @@ export default function ProfilePage() {
 
                       <div className="text-xs text-gray-500">
                         Fast, near-zero cost Bitcoin transactions on Spark L2 network.
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* Divider */}
+                <div className="border-t border-gray-700/50 my-6"></div>
+                <div className="text-center text-gray-500 text-sm mb-4">
+                  📊 Read-Only Reference Addresses
+                </div>
+
+                {/* Native SegWit - For Balance Reference */}
+                {nativeSegwit && (
+                  <div className="group bg-gradient-to-br from-[#111317]/50 to-[#1b1c1f]/50 backdrop-blur-sm p-6 rounded-2xl border border-orange-500/20 hover:border-orange-500/40 transition-all duration-300 opacity-75">
+                    <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+                      <div className="flex-1">
+                        <div className="text-orange-400 text-sm mb-2 uppercase tracking-wider font-semibold flex items-center gap-2">
+                          <span className="text-2xl">🔐</span>
+                          Native SegWit (Balance Reference)
+                        </div>
+                        <div className="text-white/70 font-mono text-xs break-all bg-black/40 p-3 rounded-lg">
+                          {nativeSegwit.address}
+                        </div>
+                      </div>
+                      <div className="text-right">
+                        <div className="text-2xl font-bold text-orange-300">
+                          {nativeSegwit.balance !== null ? nativeSegwit.balance.toFixed(8) : '...'}
+                        </div>
+                        <div className="text-xs text-gray-400">BTC (L1)</div>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* Taproot - For Inscriptions Reference */}
+                {taproot && (
+                  <div className="group bg-gradient-to-br from-[#111317]/50 to-[#1b1c1f]/50 backdrop-blur-sm p-6 rounded-2xl border border-[#f7931a]/20 hover:border-[#f7931a]/40 transition-all duration-300 opacity-75">
+                    <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+                      <div className="flex-1">
+                        <div className="text-[#f7931a] text-sm mb-2 uppercase tracking-wider font-semibold flex items-center gap-2">
+                          <span className="text-2xl">🎨</span>
+                          Taproot / Ordinals (Inscriptions Reference)
+                        </div>
+                        <div className="text-white/70 font-mono text-xs break-all bg-black/40 p-3 rounded-lg">
+                          {taproot.address}
+                        </div>
+                      </div>
+                      <div className="text-right">
+                        <div className="text-2xl font-bold text-[#ffd166]">
+                          {inscriptions.length || userData?.inscriptionCount || 0}
+                        </div>
+                        <div className="text-xs text-gray-400">Inscriptions</div>
                       </div>
                     </div>
                   </div>
