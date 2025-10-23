@@ -141,9 +141,12 @@ export default function ProfilePage() {
   }, [connected, address, walletLoading]);
 
   useEffect(() => {
-    console.log('Tab changed to:', activeTab, 'ordinalsAddress:', ordinalsAddress);
+    console.log('Tab changed to:', activeTab);
+    console.log('ordinalsAddress:', ordinalsAddress);
+    console.log('taproot?.address:', taproot?.address);
+    console.log('Are they equal?', ordinalsAddress === taproot?.address);
     
-    if (activeTab === 'inscriptions' && ordinalsAddress) {
+    if (activeTab === 'inscriptions' && (taproot?.address || ordinalsAddress)) {
       console.log('Triggering fetchInscriptions...');
       fetchInscriptions();
       setInscriptionPage(1); // Reset to page 1 when sort changes
@@ -159,11 +162,11 @@ export default function ProfilePage() {
     if (activeTab === 'profile' && connected && address) {
       fetchUserData();
     }
-  }, [activeTab, ordinalsAddress, connected, address]);
+  }, [activeTab, ordinalsAddress, taproot, connected, address]);
 
   // Re-fetch inscriptions when sort order changes
   useEffect(() => {
-    if (activeTab === 'inscriptions' && ordinalsAddress && inscriptions.length > 0) {
+    if (activeTab === 'inscriptions' && (taproot?.address || ordinalsAddress) && inscriptions.length > 0) {
       fetchInscriptions();
     }
   }, [inscriptionSortOrder]);
@@ -280,17 +283,20 @@ export default function ProfilePage() {
   };
 
   const fetchInscriptions = async () => {
-    if (!ordinalsAddress) {
-      console.log('No ordinals address available for fetching inscriptions');
+    // Use taproot address for inscriptions (inscriptions only exist on Taproot)
+    const taprootAddr = taproot?.address || ordinalsAddress;
+    
+    if (!taprootAddr) {
+      console.log('No taproot address available for fetching inscriptions');
       return;
     }
     
-    console.log('Fetching inscriptions for address:', ordinalsAddress);
+    console.log('Fetching inscriptions for Taproot address:', taprootAddr);
     setLoadingInscriptions(true);
     try {
       // Fetch more inscriptions to support pagination - get up to 200
       const response = await fetch(
-        `https://api.hiro.so/ordinals/v1/inscriptions?address=${ordinalsAddress}&limit=200`
+        `https://api.hiro.so/ordinals/v1/inscriptions?address=${taprootAddr}&limit=200`
       );
       const data = await response.json();
       console.log('Inscriptions response:', data);
