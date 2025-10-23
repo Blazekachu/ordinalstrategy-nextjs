@@ -294,25 +294,42 @@ export default function ProfilePage() {
     console.log('Fetching inscriptions for Taproot address:', taprootAddr);
     setLoadingInscriptions(true);
     try {
-      // Fetch more inscriptions to support pagination - get up to 200
+      // Fetch inscriptions from ordinals.com API (more reliable than Hiro)
+      // Note: ordinals.com doesn't have a public API, so we'll use Best in Slot or ord.io
+      // Try Best in Slot API which is more comprehensive
       const response = await fetch(
-        `https://api.hiro.so/ordinals/v1/inscriptions?address=${taprootAddr}&limit=200`
+        `https://api.bestinslot.xyz/v3/inscriptions/wallet_all?address=${taprootAddr}&sort_by=inscribed_desc&page_size=200`,
+        {
+          headers: {
+            'accept': 'application/json'
+          }
+        }
       );
       const data = await response.json();
-      console.log('Inscriptions response:', data);
+      console.log('Inscriptions response from Best in Slot:', data);
       
-      let fetchedInscriptions = data.results || [];
+      // Best in Slot API returns data in 'data' field
+      let fetchedInscriptions = data.data || [];
+      
+      // Normalize Best in Slot data structure to match Hiro API format
+      fetchedInscriptions = fetchedInscriptions.map((insc: any) => ({
+        id: insc.inscription_id || insc.id,
+        number: insc.inscription_number || insc.number,
+        content_type: insc.mime_type || insc.content_type,
+        content_length: insc.media_length || insc.content_length,
+        timestamp: insc.genesis_ts || insc.timestamp,
+      }));
       
       // Sort based on user preference
       if (inscriptionSortOrder === 'oldest') {
-        // Hiro API returns newest first by default, so reverse for oldest
+        // API returns newest first by default, so reverse for oldest
         fetchedInscriptions = [...fetchedInscriptions].reverse();
       }
       // 'latest' is already the default order from API
       
       setInscriptions(fetchedInscriptions);
-      // Hiro API returns the total count in the response
-      setTotalInscriptionCount(data.total || data.results?.length || 0);
+      // Best in Slot API returns the total count in 'block_height' response or we use array length
+      setTotalInscriptionCount(data.total || fetchedInscriptions.length || 0);
     } catch (error) {
       console.error('Error fetching inscriptions:', error);
       setInscriptions([]);
