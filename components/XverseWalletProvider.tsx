@@ -210,8 +210,8 @@ export function XverseWalletProvider({ children }: { children: ReactNode }) {
         let sparkAddress = null;
         try {
           const sparkResponse = await request('spark_getAddresses', {});
-          if (sparkResponse.status === 'success' && sparkResponse.result && sparkResponse.result.length > 0) {
-            sparkAddress = sparkResponse.result[0].address;
+          if (sparkResponse.status === 'success' && sparkResponse.result?.addresses?.length > 0) {
+            sparkAddress = sparkResponse.result.addresses[0].address;
             console.log('Spark address connected:', sparkAddress);
           }
         } catch (sparkError) {
