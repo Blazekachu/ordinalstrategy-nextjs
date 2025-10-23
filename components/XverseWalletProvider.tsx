@@ -52,7 +52,7 @@ export function XverseWalletProvider({ children }: { children: ReactNode }) {
     if (savedAddress && savedOrdinalsAddress) {
       const initBalance = async () => {
         const balance = await fetchBalance(savedAddress);
-        const sparkBalance = savedSparkAddress ? await fetchBalance(savedSparkAddress) : null;
+        const sparkBalance = savedSparkAddress ? await fetchBalance(savedSparkAddress, true) : null;
         setWalletState(prev => ({
           ...prev,
           connected: true,
@@ -73,14 +73,27 @@ export function XverseWalletProvider({ children }: { children: ReactNode }) {
     }
   }, []);
 
-  const fetchBalance = async (address: string): Promise<number | null> => {
+  const fetchBalance = async (address: string, isSpark = false): Promise<number | null> => {
     try {
-      // Fetch balance from mempool.space API
-      const response = await fetch(`https://mempool.space/api/address/${address}`);
-      const data = await response.json();
-      const balanceInSats = data.chain_stats.funded_txo_sum - data.chain_stats.spent_txo_sum;
-      const balanceInBTC = balanceInSats / 100000000;
-      return balanceInBTC;
+      if (isSpark) {
+        // Fetch Spark balance from dedicated API
+        const response = await fetch(`/api/spark/balance?address=${address}`);
+        const data = await response.json();
+        if (data.error) {
+          console.error('Error fetching Spark balance:', data.error);
+          return null;
+        }
+        // Spark API returns balance in btkn (satoshis)
+        const balanceInBTC = (data.balance || 0) / 100000000;
+        return balanceInBTC;
+      } else {
+        // Fetch Bitcoin balance from mempool.space API
+        const response = await fetch(`https://mempool.space/api/address/${address}`);
+        const data = await response.json();
+        const balanceInSats = data.chain_stats.funded_txo_sum - data.chain_stats.spent_txo_sum;
+        const balanceInBTC = balanceInSats / 100000000;
+        return balanceInBTC;
+      }
     } catch (error) {
       console.error('Error fetching balance:', error);
       return null;
@@ -110,7 +123,7 @@ export function XverseWalletProvider({ children }: { children: ReactNode }) {
       }));
     }
     if (walletState.spark?.address) {
-      const balance = await fetchBalance(walletState.spark.address);
+      const balance = await fetchBalance(walletState.spark.address, true); // true = isSpark
       setWalletState(prev => ({
         ...prev,
         spark: prev.spark ? { ...prev.spark, balance } : null,
@@ -174,8 +187,9 @@ export function XverseWalletProvider({ children }: { children: ReactNode }) {
       }
       
       // Desktop: Use browser extension
+      // Request Ordinals, Payment, and Stacks (for Spark) addresses
       const response = await request('getAccounts', {
-        purposes: [AddressPurpose.Ordinals, AddressPurpose.Payment],
+        purposes: [AddressPurpose.Ordinals, AddressPurpose.Payment, 'stacks' as any],
         message: 'Connect to Ordinal Strategy',
       });
 
@@ -186,14 +200,15 @@ export function XverseWalletProvider({ children }: { children: ReactNode }) {
         const paymentAccount = response.result.find(
           (account: any) => account.purpose === AddressPurpose.Payment
         );
+        const stacksAccount = response.result.find(
+          (account: any) => account.purpose === 'stacks'
+        );
 
         const ordinalsAddress = ordinalsAccount?.address || null;
         const paymentAddress = paymentAccount?.address || null;
-        
-        // TODO: Spark integration pending - need to determine correct API method
-        // Spark is different from Stacks - it's a Bitcoin L2 protocol
-        // Documentation: https://docs.spark.money/wallet/introduction
-        const sparkAddress = null;
+        // Spark address is available through Stacks purpose
+        // Xverse provides Spark L2 functionality through the Stacks address
+        const sparkAddress = stacksAccount?.address || null;
 
         // Save to localStorage
         if (paymentAddress) localStorage.setItem('xverse_address', paymentAddress);
@@ -203,7 +218,7 @@ export function XverseWalletProvider({ children }: { children: ReactNode }) {
         // Fetch balances for all addresses
         const paymentBalance = paymentAddress ? await fetchBalance(paymentAddress) : null;
         const ordinalsBalance = ordinalsAddress ? await fetchBalance(ordinalsAddress) : null;
-        const sparkBalance = sparkAddress ? await fetchBalance(sparkAddress) : null;
+        const sparkBalance = sparkAddress ? await fetchBalance(sparkAddress, true) : null;
 
         setWalletState({
           connected: true,

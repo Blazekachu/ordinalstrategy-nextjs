@@ -55,9 +55,6 @@ export default function ProfilePage() {
   const [activeTab, setActiveTab] = useState<'profile' | 'addresses' | 'games' | 'leaderboard' | 'inscriptions'>('profile');
   const [inscriptions, setInscriptions] = useState<any[]>([]);
   const [loadingInscriptions, setLoadingInscriptions] = useState(false);
-  const [sparkAddressInput, setSparkAddressInput] = useState('');
-  const [sparkBalance, setSparkBalance] = useState<{ btcSoftBalanceSats: number; btcHardBalanceSats: number; tokens: any[] } | null>(null);
-  const [loadingSparkBalance, setLoadingSparkBalance] = useState(false);
   const [leaderboardData, setLeaderboardData] = useState<any[]>([]);
   const [leaderboardSort, setLeaderboardSort] = useState<'highScore' | 'gamesPlayed' | 'avgScore'>('highScore');
   const [loadingLeaderboard, setLoadingLeaderboard] = useState(false);
@@ -162,13 +159,6 @@ export default function ProfilePage() {
   }, [activeTab, leaderboardSort]);
 
   useEffect(() => {
-    // Load saved Spark address from localStorage
-    const savedSparkAddress = localStorage.getItem('spark_address');
-    if (savedSparkAddress) {
-      setSparkAddressInput(savedSparkAddress);
-      fetchSparkBalance(savedSparkAddress);
-    }
-
     // Auto-refresh data when page becomes visible (user returns from game)
     const handleVisibilityChange = () => {
       if (!document.hidden && connected && address) {
@@ -182,31 +172,6 @@ export default function ProfilePage() {
     return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
   }, [connected, address]);
 
-  const fetchSparkBalance = async (sparkAddr: string) => {
-    if (!sparkAddr || !sparkAddr.startsWith('sp')) {
-      return;
-    }
-
-    setLoadingSparkBalance(true);
-    try {
-      const response = await fetch(`/api/spark/balance?address=${sparkAddr}`);
-      if (response.ok) {
-        const data = await response.json();
-        setSparkBalance(data.balance);
-        localStorage.setItem('spark_address', sparkAddr);
-      }
-    } catch (error) {
-      console.error('Error fetching Spark balance:', error);
-    } finally {
-      setLoadingSparkBalance(false);
-    }
-  };
-
-  const handleSparkAddressSubmit = () => {
-    if (sparkAddressInput) {
-      fetchSparkBalance(sparkAddressInput);
-    }
-  };
 
   const fetchUserData = async () => {
     try {
@@ -270,7 +235,7 @@ export default function ProfilePage() {
           profilePic: editProfilePic,
           nativeSegwitAddress: nativeSegwit?.address,
           taprootAddress: taproot?.address,
-          sparkAddress: sparkAddressInput,
+          sparkAddress: spark?.address,
           inscriptionCount: inscriptions.length,
         }),
       });
@@ -729,87 +694,55 @@ export default function ProfilePage() {
                 )}
 
                 {/* Spark (Bitcoin L2) */}
-                <div className="group bg-gradient-to-br from-[#111317]/90 to-[#1b1c1f]/90 backdrop-blur-sm p-6 rounded-2xl border-2 border-blue-500/20 hover:border-blue-500/60 hover:shadow-[0_10px_40px_rgba(59,130,246,0.2)] transition-all duration-300">
-                  <div className="flex flex-col gap-4">
-                    <div className="text-blue-400 text-sm uppercase tracking-wider font-semibold flex items-center gap-2">
-                      <span className="text-2xl">⚡</span>
-                      Spark L2 (Bitcoin Native)
-                    </div>
-                    
-                    {/* Spark Address Input */}
-                    <div className="flex flex-col md:flex-row gap-3">
-                      <input
-                        type="text"
-                        value={sparkAddressInput}
-                        onChange={(e) => setSparkAddressInput(e.target.value)}
-                        placeholder="Enter your Spark address (sp...)"
-                        className="flex-1 bg-black/40 border border-blue-500/30 rounded-lg px-4 py-3 text-white font-mono text-sm focus:outline-none focus:border-blue-500/60 transition-colors"
-                      />
-                      <button
-                        onClick={handleSparkAddressSubmit}
-                        disabled={loadingSparkBalance}
-                        className="bg-blue-500 text-white px-6 py-3 rounded-lg font-semibold hover:bg-blue-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap"
-                      >
-                        {loadingSparkBalance ? '...' : 'Connect Spark'}
-                      </button>
-                    </div>
-
-                    {/* Spark Balance Display */}
-                    {sparkBalance && (
-                      <div className="mt-4 space-y-4">
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                          {/* Soft Balance */}
-                          <div className="bg-black/40 p-4 rounded-lg border border-blue-500/20">
-                            <div className="text-xs text-gray-400 mb-1">Soft Balance</div>
-                            <div className="text-2xl font-bold text-blue-300">
-                              {(sparkBalance.btcSoftBalanceSats / 100000000).toFixed(8)}
-                            </div>
-                            <div className="text-xs text-gray-400">BTC</div>
-                          </div>
-
-                          {/* Hard Balance */}
-                          <div className="bg-black/40 p-4 rounded-lg border border-blue-500/20">
-                            <div className="text-xs text-gray-400 mb-1">Hard Balance</div>
-                            <div className="text-2xl font-bold text-blue-300">
-                              {(sparkBalance.btcHardBalanceSats / 100000000).toFixed(8)}
-                            </div>
-                            <div className="text-xs text-gray-400">BTC</div>
-                          </div>
-                        </div>
-
-                        {/* BTKN Tokens */}
-                        {sparkBalance.tokens && sparkBalance.tokens.length > 0 && (
-                          <div className="bg-black/40 p-4 rounded-lg border border-blue-500/20">
-                            <div className="text-xs text-gray-400 mb-2">BTKN Tokens</div>
-                            <div className="space-y-2">
-                              {sparkBalance.tokens.map((token: any, index: number) => (
-                                <div key={index} className="flex justify-between items-center">
-                                  <span className="text-white">{token.ticker || token.name}</span>
-                                  <span className="text-blue-300 font-mono">{token.balance}</span>
-                                </div>
-                              ))}
-                            </div>
-                          </div>
-                        )}
+                {spark && (
+                  <div className="group bg-gradient-to-br from-[#111317]/90 to-[#1b1c1f]/90 backdrop-blur-sm p-6 rounded-2xl border-2 border-blue-500/20 hover:border-blue-500/60 hover:shadow-[0_10px_40px_rgba(59,130,246,0.2)] transition-all duration-300">
+                    <div className="flex flex-col gap-4">
+                      <div className="text-blue-400 text-sm uppercase tracking-wider font-semibold flex items-center gap-2">
+                        <span className="text-2xl">⚡</span>
+                        Spark L2 (Bitcoin Native)
                       </div>
-                    )}
+                      
+                      {/* Spark Address */}
+                      <div className="flex items-center justify-between gap-4 bg-black/40 p-4 rounded-xl border border-blue-500/20">
+                        <div className="flex-1 min-w-0">
+                          <div className="text-xs text-gray-400 mb-1">Address</div>
+                          <div className="font-mono text-sm text-white truncate">{spark.address}</div>
+                        </div>
+                        <button
+                          onClick={() => {
+                            navigator.clipboard.writeText(spark.address);
+                          }}
+                          className="text-blue-400 hover:text-blue-300 transition-colors px-3 py-1 rounded-lg hover:bg-blue-500/10"
+                        >
+                          📋
+                        </button>
+                      </div>
 
-                    <div className="text-xs text-gray-500">
-                      Fast, near-zero cost Bitcoin transactions. Get your Spark address from Xverse wallet.
+                      {/* Balance Display */}
+                      <div className="flex items-center justify-between bg-gradient-to-r from-blue-500/5 to-blue-600/5 p-4 rounded-xl border border-blue-500/20">
+                        <div>
+                          <div className="text-xs text-gray-400 mb-1">Total Balance</div>
+                          <div className="text-sm text-blue-300">Spark L2</div>
+                        </div>
+                        <div className="text-right">
+                          <div className="text-3xl font-bold text-blue-400">
+                            {spark.balance !== null ? spark.balance.toFixed(8) : '...'}
+                          </div>
+                          <div className="text-sm text-gray-400">BTC</div>
+                        </div>
+                      </div>
+
+                      <div className="text-xs text-gray-500">
+                        Fast, near-zero cost Bitcoin transactions on Spark L2 network.
+                      </div>
                     </div>
                   </div>
-                </div>
+                )}
 
                 {/* Refresh Button */}
                 <div className="flex justify-center pt-4">
                   <button
-                    onClick={() => {
-                      refreshBalances();
-                      const savedSparkAddress = localStorage.getItem('spark_address');
-                      if (savedSparkAddress) {
-                        fetchSparkBalance(savedSparkAddress);
-                      }
-                    }}
+                    onClick={() => refreshBalances()}
                     className="bg-[#f7931a] text-[#0b0c10] px-6 py-3 rounded-lg font-semibold hover:bg-[#ffd166] hover:-translate-y-0.5 transition-all flex items-center gap-2"
                   >
                     🔄 Refresh All Balances
