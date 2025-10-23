@@ -187,9 +187,9 @@ export function XverseWalletProvider({ children }: { children: ReactNode }) {
       }
       
       // Desktop: Use browser extension
-      // Request Ordinals, Payment, and Stacks (for Spark) addresses
+      // Request Bitcoin addresses (Payment and Ordinals)
       const response = await request('getAccounts', {
-        purposes: [AddressPurpose.Ordinals, AddressPurpose.Payment, 'stacks' as any],
+        purposes: [AddressPurpose.Ordinals, AddressPurpose.Payment],
         message: 'Connect to Ordinal Strategy',
       });
 
@@ -200,15 +200,24 @@ export function XverseWalletProvider({ children }: { children: ReactNode }) {
         const paymentAccount = response.result.find(
           (account: any) => account.purpose === AddressPurpose.Payment
         );
-        const stacksAccount = response.result.find(
-          (account: any) => account.purpose === 'stacks'
-        );
 
         const ordinalsAddress = ordinalsAccount?.address || null;
         const paymentAddress = paymentAccount?.address || null;
-        // Spark address is available through Stacks purpose
-        // Xverse provides Spark L2 functionality through the Stacks address
-        const sparkAddress = stacksAccount?.address || null;
+        
+        // Request Spark address separately using dedicated Spark method
+        // Spark is a Bitcoin L2 protocol, separate from Stacks
+        // Documentation: https://docs.xverse.app/sats-connect/spark-methods/spark_getaddress
+        let sparkAddress = null;
+        try {
+          const sparkResponse = await request('spark_getAddress', {});
+          if (sparkResponse.status === 'success' && sparkResponse.result && sparkResponse.result.length > 0) {
+            sparkAddress = sparkResponse.result[0].address;
+            console.log('Spark address connected:', sparkAddress);
+          }
+        } catch (sparkError) {
+          console.log('Spark not available or user declined:', sparkError);
+          // Spark is optional - continue without it
+        }
 
         // Save to localStorage
         if (paymentAddress) localStorage.setItem('xverse_address', paymentAddress);
