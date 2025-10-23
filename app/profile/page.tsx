@@ -294,13 +294,34 @@ export default function ProfilePage() {
     console.log('Fetching inscriptions for Taproot address:', taprootAddr);
     setLoadingInscriptions(true);
     try {
-      // Back to Hiro API with proper error handling
+      // Use Hiro API with proper headers as per documentation
+      // https://docs.hiro.so/en/apis/ordinals-api
       const response = await fetch(
-        `https://api.hiro.so/ordinals/v1/inscriptions?address=${taprootAddr}&limit=200`
+        `https://api.hiro.so/ordinals/v1/inscriptions?address=${taprootAddr}&limit=200`,
+        {
+          headers: {
+            'Accept': 'application/json',
+          }
+        }
       );
+      
+      // Log rate limit info
+      const rateLimit = response.headers.get('x-ratelimit-limit');
+      const rateLimitRemaining = response.headers.get('x-ratelimit-remaining');
+      console.log('Rate limit:', rateLimit, 'Remaining:', rateLimitRemaining);
       
       if (!response.ok) {
         console.error('Hiro API error:', response.status, response.statusText);
+        console.error('Response headers:', Object.fromEntries(response.headers.entries()));
+        
+        // Try to get error details from response body
+        try {
+          const errorBody = await response.text();
+          console.error('Error body:', errorBody);
+        } catch (e) {
+          console.error('Could not read error body');
+        }
+        
         throw new Error(`API returned ${response.status}`);
       }
       
