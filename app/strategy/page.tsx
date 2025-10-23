@@ -9,7 +9,9 @@ import { useXverseWallet } from '@/components/XverseWalletProvider';
 
 export default function StrategyPage() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const sparkCanvasRef = useRef<HTMLCanvasElement>(null);
   const [showCountMeIn, setShowCountMeIn] = useState(false);
+  const [showSparkAnimation, setShowSparkAnimation] = useState(false);
   const { login, authenticated } = usePrivy();
   const { connect: connectWallet, connected, address, balance, loading } = useXverseWallet();
   const router = useRouter();
@@ -86,10 +88,78 @@ export default function StrategyPage() {
     return () => cancelAnimationFrame(animationId);
   }, []);
 
+  // Spark animation effect
+  useEffect(() => {
+    if (!showSparkAnimation || !sparkCanvasRef.current) return;
+
+    const canvas = sparkCanvasRef.current;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+
+    const dpr = window.devicePixelRatio || 1;
+    canvas.width = window.innerWidth * dpr;
+    canvas.height = window.innerHeight * dpr;
+    canvas.style.width = window.innerWidth + 'px';
+    canvas.style.height = window.innerHeight + 'px';
+    ctx.scale(dpr, dpr);
+
+    const fontSize = 14;
+    const cols = Math.floor(window.innerWidth / fontSize);
+    const drops = new Array(cols).fill(0);
+
+    let animationId: number;
+    const drawMatrix = () => {
+      ctx.fillStyle = 'rgba(11, 12, 16, 0.12)';
+      ctx.fillRect(0, 0, window.innerWidth, window.innerHeight);
+
+      ctx.font = `${fontSize}px monospace`;
+      for (let i = 0; i < cols; i++) {
+        const char = Math.random() < 0.5 ? '0' : '1';
+        const x = i * fontSize;
+        const y = drops[i] * fontSize;
+        const highlight = Math.random() < 0.06;
+        ctx.fillStyle = highlight ? '#ffffff' : '#f7931a';
+        ctx.fillText(char, x, y);
+
+        if (y > window.innerHeight && Math.random() > 0.975) drops[i] = 0;
+        else drops[i]++;
+      }
+      animationId = requestAnimationFrame(drawMatrix);
+    };
+
+    drawMatrix();
+
+    // Navigate to profile after 2.5 seconds
+    const timer = setTimeout(() => {
+      router.push('/profile');
+    }, 2500);
+
+    return () => {
+      cancelAnimationFrame(animationId);
+      clearTimeout(timer);
+    };
+  }, [showSparkAnimation, router]);
+
   return (
     <div className="min-h-screen bg-[#0b0c10] text-white relative">
       {/* Matrix Background Canvas */}
       <canvas ref={canvasRef} className="fixed inset-0 w-full h-full z-0" />
+
+      {/* Spark Animation Overlay */}
+      {showSparkAnimation && (
+        <div className="fixed inset-0 z-[10002]">
+          <canvas ref={sparkCanvasRef} className="absolute inset-0 w-full h-full" style={{ display: 'block', backgroundColor: '#000' }} />
+          <div className="absolute inset-0 flex items-center justify-center">
+            <div className="text-[#f7931a] font-bold animate-pulse" style={{
+              fontSize: 'min(40vw, 300px)',
+              textShadow: '0 0 40px rgba(247,147,26,0.8), 0 0 80px rgba(247,147,26,0.6), 0 0 120px rgba(247,147,26,0.4)',
+              animation: 'pulse 1s ease-in-out infinite'
+            }}>
+              *
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Count Me In Modal */}
       {showCountMeIn && (
@@ -116,12 +186,18 @@ export default function StrategyPage() {
                     <div className="text-[#f7931a] font-bold mt-2">{balance.toFixed(8)} BTC</div>
                   )}
                 </div>
-                <button
-                  onClick={() => router.push('/profile')}
-                  className="bg-[#f7931a] text-[#0b0c10] w-full px-6 py-3 rounded-lg font-semibold hover:bg-[#ffd166] hover:-translate-y-0.5 transition-all"
-                >
-                  Go to Profile →
-                </button>
+                <div className="w-full max-w-[280px] mx-auto">
+                  <ScrollButton
+                    text="Spark it"
+                    onComplete={() => {
+                      setShowCountMeIn(false);
+                      setShowSparkAnimation(true);
+                    }}
+                    backgroundColor="#f7931a"
+                    textColor="#0b0c10"
+                    accentColor="#ffffff"
+                  />
+                </div>
               </div>
             ) : (
               <button
