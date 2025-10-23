@@ -294,22 +294,22 @@ export default function ProfilePage() {
     console.log('Fetching inscriptions for Taproot address:', taprootAddr);
     setLoadingInscriptions(true);
     try {
-      // Using OKX Ordinals API instead of Hiro (Hiro has 60 char query limit, Taproot addresses are 62 chars)
-      // OKX API docs: https://www.okx.com/web3/build/docs/waas/ordinals-inscriptions-api
+      // Using Ordiscan API - professional hosted Ordinals indexer
+      // API Docs: https://ordiscan.com/docs/api
       const response = await fetch(
-        `https://www.okx.com/api/v5/explorer/inscription/inscription-list-by-address?address=${taprootAddr}&limit=200&page=1`,
+        `https://api.ordiscan.com/v1/address/${taprootAddr}/inscriptions?limit=200`,
         {
           headers: {
             'Accept': 'application/json',
-            'Ok-Access-Key': '***REMOVED***', // Public API key for ordinals data
+            'Authorization': `Bearer ***REMOVED***`,
           }
         }
       );
       
-      console.log('OKX API response status:', response.status);
+      console.log('Ordiscan API response status:', response.status);
       
       if (!response.ok) {
-        console.error('OKX API error:', response.status, response.statusText);
+        console.error('Ordiscan API error:', response.status, response.statusText);
         
         // Try to get error details from response body
         try {
@@ -323,32 +323,37 @@ export default function ProfilePage() {
       }
       
       const data = await response.json();
-      console.log('Inscriptions response from OKX:', data);
+      console.log('Inscriptions response from Ordiscan:', data);
       
-      // OKX API format: { code: "0", msg: "", data: { inscriptionsList: [...], totalPage: "1" } }
-      let fetchedInscriptions = data.data?.inscriptionsList || [];
-      const totalCount = parseInt(data.data?.total || '0');
+      // Ordiscan API format: { data: [...], total: number, limit: number, offset: number }
+      let fetchedInscriptions = data.data || [];
+      const totalCount = data.total || 0;
       
       console.log('Total inscriptions:', totalCount);
       console.log('Results count:', fetchedInscriptions.length);
       
-      // Transform OKX format to match our expected format
+      // Transform Ordiscan format to match our expected format
       fetchedInscriptions = fetchedInscriptions.map((insc: any) => ({
-        id: insc.inscriptionId,
-        number: insc.inscriptionNumber,
-        address: insc.ownerAddress,
-        content_type: insc.contentType,
-        content_length: insc.contentSize,
-        timestamp: new Date(parseInt(insc.timestamp)).getTime(),
-        tx_id: insc.txId,
-        // Add content URL for rendering
-        content: `https://ordinals.com/content/${insc.inscriptionId}`,
+        id: insc.inscription_id,
+        number: insc.inscription_number,
+        address: insc.address,
+        content_type: insc.content_type,
+        content_length: insc.content_length,
+        timestamp: new Date(insc.timestamp).getTime(),
+        tx_id: insc.genesis_transaction,
+        // Use ordinals.com content URLs for native rendering (HTML, 3D, images, etc.)
+        content: `https://ordinals.com/content/${insc.inscription_id}`,
+        // Additional metadata for better rendering
+        sat: insc.sat,
+        output: insc.output,
       }));
       
       // Sort based on user preference
       if (inscriptionSortOrder === 'oldest') {
+        // Reverse to show oldest first
         fetchedInscriptions = [...fetchedInscriptions].reverse();
       }
+      // 'latest' is already the default order from API
       
       setInscriptions(fetchedInscriptions);
       setTotalInscriptionCount(totalCount);
