@@ -1538,7 +1538,7 @@ export default function ProfilePage() {
                     </tr>
                   </thead>
                   <tbody>
-                              {getPaginatedInscriptions().map((inscription: any, index) => (
+                              {inscriptions.map((inscription: any, index) => (
                                 <tr
                                   key={inscription.id}
                                   className="border-t border-gray-700 hover:bg-[#1b1c1f]/30 transition-colors"
