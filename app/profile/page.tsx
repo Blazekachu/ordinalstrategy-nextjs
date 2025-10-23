@@ -301,6 +301,7 @@ export default function ProfilePage() {
         {
           headers: {
             'Accept': 'application/json',
+            'x-api-key': '***REMOVED***',
           }
         }
       );
