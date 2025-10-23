@@ -324,13 +324,23 @@ export default function ProfilePage() {
       
       const data = await response.json();
       console.log('Inscriptions response from Ordiscan:', data);
+      console.log('Full response structure:', JSON.stringify(data, null, 2));
       
-      // Ordiscan API format: { data: [...], total: number, limit: number, offset: number }
-      let fetchedInscriptions = data.data || [];
-      const totalCount = data.total || 0;
+      // Ordiscan API format can vary - try multiple paths for total count
+      let fetchedInscriptions = data.data || data.results || [];
       
-      console.log('Total inscriptions:', totalCount);
-      console.log('Results count:', fetchedInscriptions.length);
+      // Try different possible locations for total count
+      const totalCount = data.total || 
+                        data.totalCount || 
+                        data.count || 
+                        data.pagination?.total ||
+                        data.meta?.total ||
+                        fetchedInscriptions.length || // Fallback to array length if no total field
+                        0;
+      
+      console.log('Total inscriptions from API:', totalCount);
+      console.log('Fetched inscriptions count:', fetchedInscriptions.length);
+      console.log('Data keys:', Object.keys(data));
       
       // Transform Ordiscan format to match our expected format
       fetchedInscriptions = fetchedInscriptions.map((insc: any) => ({
