@@ -56,8 +56,8 @@ export default function ProfilePage() {
   const [inscriptions, setInscriptions] = useState<any[]>([]);
   const [totalInscriptionCount, setTotalInscriptionCount] = useState<number>(0);
   const [loadingInscriptions, setLoadingInscriptions] = useState(false);
-  const [inscriptionViewMode, setInscriptionViewMode] = useState<'grid-large' | 'grid-small' | 'list'>('grid-large');
-  const [inscriptionSortOrder, setInscriptionSortOrder] = useState<'latest' | 'oldest'>('latest');
+  const [inscriptionViewMode, setInscriptionViewMode] = useState<'grid-small' | 'list'>('grid-small');
+  const [inscriptionSortOrder, setInscriptionSortOrder] = useState<'low-to-high' | 'high-to-low'>('high-to-low');
   const [leaderboardData, setLeaderboardData] = useState<any[]>([]);
   const [leaderboardSort, setLeaderboardSort] = useState<'highScore' | 'gamesPlayed' | 'avgScore'>('highScore');
   const [loadingLeaderboard, setLoadingLeaderboard] = useState(false);
@@ -696,11 +696,11 @@ export default function ProfilePage() {
         const numA = a.number ?? -Infinity;
         const numB = b.number ?? -Infinity;
         
-        if (inscriptionSortOrder === 'oldest') {
-          // Oldest first: lowest number first (but keep cursed inscriptions at the end)
+        if (inscriptionSortOrder === 'low-to-high') {
+          // Low to high: lowest number first
           return numA - numB;
         } else {
-          // Latest first: highest number first (default)
+          // High to low: highest number first (default)
           return numB - numA;
         }
       });
@@ -746,8 +746,8 @@ export default function ProfilePage() {
     return `${mins}m ${secs}s`;
   };
 
-  // View mode handler for inscriptions (no pagination needed)
-  const handleViewModeChange = (mode: 'grid-large' | 'grid-small' | 'list') => {
+  // View mode handler for inscriptions
+  const handleViewModeChange = (mode: 'grid-small' | 'list') => {
     setInscriptionViewMode(mode);
   };
 
