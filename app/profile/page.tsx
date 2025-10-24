@@ -348,8 +348,12 @@ export default function ProfilePage() {
           });
           
           // Continue fetching until we reach the reported total
+          // AGGRESSIVE: Keep going even BEYOND reported total to catch any stragglers
           offset = limit;
-          while (offset < reportedTotal && offset < 50000) { // Safety limit at 50k
+          let consecutiveEmptyBatches = 0;
+          const maxOffset = Math.max(reportedTotal + 500, 5000); // At least 5000 or total+500
+          
+          while (offset < maxOffset) {
             const response = await fetch(
               `https://api.ordiscan.com/v1/address/${taprootAddr}/inscriptions?limit=${limit}&offset=${offset}`,
               {
@@ -361,27 +365,34 @@ export default function ProfilePage() {
             );
             
             if (!response.ok) {
-              console.warn(`⚠️ [Ordiscan] Failed at offset ${offset}, continuing...`);
+              console.warn(`⚠️ [Ordiscan] Failed at offset ${offset} (status ${response.status}), continuing...`);
               offset += limit;
-              continue; // Try next batch instead of breaking
+              continue;
             }
             
             const data = await response.json();
             const batch = data.data || [];
             
-            // If we get an empty batch but haven't reached the total, keep trying
-            if (batch.length === 0 && offset < reportedTotal - limit) {
-              console.log(`⚠️ [Ordiscan] Empty batch at offset ${offset}, but total is ${reportedTotal}. Continuing...`);
+            // Track empty batches
+            if (batch.length === 0) {
+              consecutiveEmptyBatches++;
+              console.log(`⚠️ [Ordiscan] Empty batch #${consecutiveEmptyBatches} at offset ${offset} (count: ${count}/${reportedTotal})`);
+              
+              // Only stop after 5 consecutive empty batches AND we have at least the reported total
+              if (consecutiveEmptyBatches >= 5 && count >= reportedTotal) {
+                console.log(`✅ [Ordiscan] Stopping: 5 empty batches and have ${count} inscriptions`);
+                break;
+              }
+              
               offset += limit;
               continue;
             }
             
-            // If truly no more data, stop
-            if (batch.length === 0) {
-              console.log(`✅ [Ordiscan] Reached end at offset ${offset}`);
-              break;
-            }
+            // Reset empty batch counter on successful batch
+            consecutiveEmptyBatches = 0;
             
+            // Process batch
+            let addedThisBatch = 0;
             batch.forEach((insc: any) => {
               if (insc.inscription_id && !allInscriptionsMap.has(insc.inscription_id)) {
                 allInscriptionsMap.set(insc.inscription_id, {
@@ -395,13 +406,16 @@ export default function ProfilePage() {
                   content: `https://ordinals.com/content/${insc.inscription_id}`,
                 });
                 count++;
+                addedThisBatch++;
               }
             });
             
+            console.log(`📦 [Ordiscan] Offset ${offset}: fetched ${batch.length}, added ${addedThisBatch} new (total: ${count}/${reportedTotal})`);
+            
             offset += limit;
             
-            // Progress log every 500 inscriptions
-            if (count % 500 === 0) {
+            // Progress log every 200 inscriptions
+            if (count % 200 === 0) {
               console.log(`📡 [Ordiscan] Progress: ${count}/${reportedTotal} inscriptions`);
             }
           }
@@ -661,10 +675,15 @@ export default function ProfilePage() {
       const cursedInscriptions = fetchedInscriptions.filter(i => i.number < 0);
       const normalInscriptions = fetchedInscriptions.filter(i => i.number >= 0);
       
+      // Find the range of inscription numbers
+      const allNumbers = fetchedInscriptions.map(i => i.number).filter(n => n != null);
+      const highestNumber = allNumbers.length > 0 ? Math.max(...allNumbers) : 0;
+      const lowestNumber = allNumbers.length > 0 ? Math.min(...allNumbers) : 0;
+      
       console.log('🎉 FINAL RESULTS:');
       console.log(`   - Total unique inscriptions: ${fetchedInscriptions.length}`);
-      console.log(`   - Normal inscriptions: ${normalInscriptions.length}`);
-      console.log(`   - Cursed inscriptions: ${cursedInscriptions.length}`);
+      console.log(`   - Normal inscriptions: ${normalInscriptions.length} (range: 0 to #${highestNumber})`);
+      console.log(`   - Cursed inscriptions: ${cursedInscriptions.length} (range: #${lowestNumber} to #-1)`);
       console.log(`   - Highest reported total: ${highestTotal}`);
       console.log(`   - Potential missing: ${Math.max(0, highestTotal - fetchedInscriptions.length)}`);
       
