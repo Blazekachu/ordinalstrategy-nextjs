@@ -288,124 +288,54 @@ export default function ProfilePage() {
       return;
     }
     
-    console.log('🚀 Fetching inscriptions via backend API for:', taprootAddr);
+    console.log('🚀 MULTI-API STRATEGY: Fetching from ALL sources for:', taprootAddr);
     setLoadingInscriptions(true);
     try {
-      // Call our backend API which aggregates multiple sources server-side
-      // This bypasses CORS issues and uses proper pagination
-      const response = await fetch(`/api/inscriptions?address=${encodeURIComponent(taprootAddr)}`);
+      // NEW APPROACH: Fetch from MULTIPLE APIs simultaneously and merge results
+      // This ensures we get ALL inscriptions even if one API is incomplete
       
-      if (!response.ok) {
-        throw new Error(`Backend API failed: ${response.status}`);
-      }
+      const allInscriptionsMap = new Map(); // Use Map for instant deduplication
+      let highestTotal = 0;
       
-      const data = await response.json();
-      
-      if (!data.success) {
-        throw new Error(data.error || 'Failed to fetch inscriptions');
-      }
-      
-      console.log('📊 Backend API Results:');
-      console.log(`   - Total inscriptions fetched: ${data.inscriptions.length}`);
-      console.log(`   - Reported total: ${data.total}`);
-      console.log(`   - Normal: ${data.stats.normal}, Cursed: ${data.stats.cursed}`);
-      
-      let fetchedInscriptions = data.inscriptions;
-      
-      // Find the range of inscription numbers
-      const allNumbers = fetchedInscriptions.map((i: any) => i.number).filter((n: number) => n != null);
-      const highestNumber = allNumbers.length > 0 ? Math.max(...allNumbers) : 0;
-      const lowestNumber = allNumbers.length > 0 ? Math.min(...allNumbers) : 0;
-      
-      console.log('📊 Inscription ranges:');
-      console.log(`   - Highest: #${highestNumber}`);
-      console.log(`   - Lowest: #${lowestNumber}`);
-      
-      // CRITICAL: Explicitly sort by inscription number
-      // Don't rely on API order - backend merges from multiple sources
-      fetchedInscriptions.sort((a: any, b: any) => {
-        // Handle null/undefined numbers
-        const numA = a.number ?? -Infinity;
-        const numB = b.number ?? -Infinity;
-        
-        if (inscriptionSortOrder === 'oldest') {
-          // Oldest first: lowest number first
-          return numA - numB;
-        } else {
-          // Latest first: highest number first (default)
-          return numB - numA;
-        }
-      });
-      
-      console.log('✅ Sorted inscriptions:', inscriptionSortOrder);
-      if (fetchedInscriptions.length > 0) {
-        console.log(`   - First inscription #: ${fetchedInscriptions[0].number}`);
-        console.log(`   - Last inscription #: ${fetchedInscriptions[fetchedInscriptions.length - 1].number}`);
-      }
-      
-      setInscriptions(fetchedInscriptions);
-      setTotalInscriptionCount(data.total);
-      
-      console.log('🎯 Updated state with', fetchedInscriptions.length, 'inscriptions to display');
-      console.log('🎯 Total count set to:', data.total);
-    } catch (error) {
-      console.error('Error fetching inscriptions:', error);
-      // If API fails, show a helpful message but don't set count to 0
-      // Keep existing count from user data if available
-      setInscriptions([]);
-      // Don't reset count to 0 if we already have a count from somewhere
-      if (totalInscriptionCount === 0 && userData?.inscriptionCount) {
-        setTotalInscriptionCount(userData.inscriptionCount);
-      }
-    } finally {
-      setLoadingInscriptions(false);
-    }
-  };
-
-  const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString('en-US', {
-      month: 'short',
-      day: 'numeric',
-      year: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit',
-    });
-  };
-
-  const formatTime = (seconds: number) => {
-    const mins = Math.floor(seconds / 60);
-    const secs = seconds % 60;
-    return `${mins}m ${secs}s`;
-  };
-
-  // View mode handler for inscriptions (no pagination needed)
-  const handleViewModeChange = (mode: 'grid-large' | 'grid-small' | 'list') => {
-    setInscriptionViewMode(mode);
-  };
-
-  if (walletLoading) {
-    return (
-      <div className="min-h-screen bg-[#0b0c10] text-white flex items-center justify-center">
-        <div className="text-center">
-          <div className="inline-block w-12 h-12 border-4 border-[#f7931a] border-t-transparent rounded-full animate-spin mb-4" />
-          <div className="text-gray-400">Loading wallet...</div>
-        </div>
-      </div>
-    );
-  }
-
-  if (!connected) {
-    return (
-      <div className="min-h-screen bg-[#0b0c10] text-white flex items-center justify-center">
-        <div className="text-center">
-          <div className="text-xl mb-2">Please connect your wallet</div>
-          <p className="text-gray-400">Connect your wallet to view your profile</p>
-        </div>
-      </div>
-    );
-  }
-
-  return (
+      // ============================================
+      // API 1: Ordiscan (with AGGRESSIVE pagination)
+      // ============================================
+      const fetchOrdiscan = async () => {
+        try {
+          console.log('📡 [Ordiscan] Starting COMPLETE fetch...');
+          let offset = 0;
+          const limit = 100; // Use smaller batches for reliability
+          let count = 0;
+          let reportedTotal = 0;
+          
+          // First request to get total count
+          const firstResponse = await fetch(
+            `https://api.ordiscan.com/v1/address/${taprootAddr}/inscriptions?limit=${limit}&offset=0`,
+            {
+              headers: {
+                'Accept': 'application/json',
+                'Authorization': `Bearer ***REMOVED***`,
+              }
+            }
+          );
+          
+          if (!firstResponse.ok) {
+            console.warn('⚠️ [Ordiscan] Initial request failed');
+            return;
+          }
+          
+          const firstData = await firstResponse.json();
+          reportedTotal = firstData.total || 0;
+          highestTotal = Math.max(highestTotal, reportedTotal);
+          console.log('📊 [Ordiscan] Total inscriptions reported:', reportedTotal);
+          
+          // Process first batch
+          const firstBatch = firstData.data || [];
+          firstBatch.forEach((insc: any) => {
+            if (insc.inscription_id && !allInscriptionsMap.has(insc.inscription_id)) {
+              allInscriptionsMap.set(insc.inscription_id, {
+                id: insc.inscription_id,
+                number: insc.inscription_number,
                 address: insc.address,
                 content_type: insc.content_type,
                 content_length: insc.content_length,
