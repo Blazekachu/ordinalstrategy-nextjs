@@ -1382,11 +1382,191 @@ export default function ProfilePage() {
             {/* Inscriptions Tab */}
             {activeTab === 'inscriptions' && (
               <div className="space-y-6">
-                <div className="text-center py-12 bg-[#111317]/90 backdrop-blur-sm rounded-2xl border-2 border-[#f7931a]/20">
-                  <div className="text-6xl mb-4">🎨</div>
-                  <div className="text-xl text-[#f7931a] mb-2">Inscriptions Tab</div>
-                  <div className="text-gray-400">Rebuilding with simplified interface...</div>
-                </div>
+                {loadingInscriptions ? (
+                  <div className="text-center py-12">
+                    <div className="inline-block w-12 h-12 border-4 border-[#f7931a] border-t-transparent rounded-full animate-spin mb-4" />
+                    <div className="text-gray-400">Loading inscriptions...</div>
+                  </div>
+                ) : inscriptions.length > 0 ? (
+                  <>
+                    {/* Control Panel */}
+                    <div className="bg-gradient-to-br from-[#111317]/90 to-[#1b1c1f]/90 backdrop-blur-sm p-4 md:p-6 rounded-2xl border-2 border-[#f7931a]/20">
+                      <div className="flex flex-col lg:flex-row gap-4 lg:gap-6">
+                        {/* View Mode Selector */}
+                        <div className="flex-1">
+                          <label className="text-sm text-gray-400 mb-2 block">View Mode</label>
+                          <div className="flex gap-2">
+                            <button
+                              onClick={() => handleViewModeChange('grid-small')}
+                              className={`flex-1 px-4 py-2 rounded-lg font-semibold transition-all ${
+                                inscriptionViewMode === 'grid-small'
+                                  ? 'bg-[#f7931a] text-[#0b0c10]'
+                                  : 'bg-black/40 text-gray-400 hover:text-white hover:bg-black/60'
+                              }`}
+                              title="Small Grid View"
+                            >
+                              <span className="hidden sm:inline">Grid</span>
+                              <span className="sm:hidden">⊡</span>
+                            </button>
+                            <button
+                              onClick={() => handleViewModeChange('list')}
+                              className={`flex-1 px-4 py-2 rounded-lg font-semibold transition-all ${
+                                inscriptionViewMode === 'list'
+                                  ? 'bg-[#f7931a] text-[#0b0c10]'
+                                  : 'bg-black/40 text-gray-400 hover:text-white hover:bg-black/60'
+                              }`}
+                              title="List View"
+                            >
+                              <span className="hidden sm:inline">List</span>
+                              <span className="sm:hidden">☰</span>
+                            </button>
+                          </div>
+                        </div>
+
+                        {/* Sort Order Selector */}
+                        <div className="flex-1">
+                          <label className="text-sm text-gray-400 mb-2 block">Sort By</label>
+                          <select
+                            value={inscriptionSortOrder}
+                            onChange={(e) => setInscriptionSortOrder(e.target.value as 'low-to-high' | 'high-to-low')}
+                            className="w-full px-4 py-2 bg-black/40 text-white rounded-lg border border-gray-700 focus:border-[#f7931a] focus:outline-none"
+                          >
+                            <option value="high-to-low">High to Low (#)</option>
+                            <option value="low-to-high">Low to High (#)</option>
+                          </select>
+                        </div>
+
+                        {/* Total Count */}
+                        <div className="flex-1 flex items-end">
+                          <div className="w-full px-4 py-2 bg-black/40 rounded-lg border border-gray-700/50">
+                            <div className="text-xs text-gray-400">Total</div>
+                            <div className="text-[#f7931a] font-bold text-lg">{totalInscriptionCount.toLocaleString()}</div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Grid View (Small) */}
+                    {inscriptionViewMode === 'grid-small' && (
+                      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 xl:grid-cols-8 gap-3">
+                        {inscriptions.map((inscription: any) => (
+                          <div
+                            key={inscription.id}
+                            className="group bg-gradient-to-br from-[#111317]/90 to-[#1b1c1f]/90 backdrop-blur-sm rounded-lg border-2 border-[#f7931a]/20 hover:border-[#f7931a]/60 hover:shadow-[0_5px_20px_rgba(247,147,26,0.2)] hover:-translate-y-1 transition-all duration-300 overflow-hidden"
+                          >
+                            {/* Small Inscription Preview */}
+                            <div className="aspect-square bg-black/40 flex items-center justify-center relative overflow-hidden">
+                              {inscription.content_type?.startsWith('image/') ? (
+                                <img
+                                  src={`https://ordinals.com/content/${inscription.id}`}
+                                  alt={`#${inscription.number}`}
+                                  className="w-full h-full object-contain"
+                                  loading="lazy"
+                                  onError={(e) => {
+                                    const img = e.target as HTMLImageElement;
+                                    if (img.src.includes('ordinals.com')) {
+                                      img.src = `https://ord-mirror.magiceden.dev/content/${inscription.id}`;
+                                    }
+                                  }}
+                                />
+                              ) : inscription.content_type?.includes('html') || inscription.content_type?.includes('text/html') ? (
+                                <iframe
+                                  src={`https://ordinals.com/content/${inscription.id}`}
+                                  className="w-full h-full border-0"
+                                  sandbox="allow-scripts"
+                                  title={`#${inscription.number}`}
+                                  loading="lazy"
+                                />
+                              ) : inscription.content_type?.startsWith('video/') ? (
+                                <video
+                                  src={`https://ordinals.com/content/${inscription.id}`}
+                                  className="w-full h-full object-contain"
+                                  muted
+                                  playsInline
+                                  preload="metadata"
+                                />
+                              ) : inscription.content_type?.startsWith('audio/') ? (
+                                <div className="text-[#f7931a] text-2xl">🎵</div>
+                              ) : (
+                                <iframe
+                                  src={`https://ordinals.com/content/${inscription.id}`}
+                                  className="w-full h-full border-0"
+                                  sandbox="allow-scripts"
+                                  title={`#${inscription.number}`}
+                                  loading="lazy"
+                                />
+                              )}
+                            </div>
+                            {/* Small Details */}
+                            <div className="p-2">
+                              <div className="text-[#f7931a] font-bold text-xs truncate">
+                                #{inscription.number?.toLocaleString() || 'N/A'}
+                              </div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+
+                    {/* List/Table View */}
+                    {inscriptionViewMode === 'list' && (
+                      <div className="bg-gradient-to-br from-[#111317]/90 to-[#1b1c1f]/90 backdrop-blur-sm rounded-2xl border-2 border-[#f7931a]/20 overflow-hidden">
+                        <div className="overflow-x-auto">
+                          <table className="w-full">
+                            <thead className="bg-[#1b1c1f]/50">
+                              <tr>
+                                <th className="px-4 py-3 text-left text-[#f7931a] font-semibold text-sm">#</th>
+                                <th className="px-4 py-3 text-left text-[#f7931a] font-semibold text-sm">ID</th>
+                                <th className="px-4 py-3 text-left text-[#f7931a] font-semibold text-sm">Type</th>
+                                <th className="px-4 py-3 text-left text-[#f7931a] font-semibold text-sm">Size</th>
+                                <th className="px-4 py-3 text-left text-[#f7931a] font-semibold text-sm">Action</th>
+                              </tr>
+                            </thead>
+                            <tbody>
+                              {inscriptions.map((inscription: any) => (
+                                <tr
+                                  key={inscription.id}
+                                  className="border-t border-gray-700 hover:bg-[#1b1c1f]/30 transition-colors"
+                                >
+                                  <td className="px-4 py-3 text-white font-bold">
+                                    #{inscription.number?.toLocaleString() || 'N/A'}
+                                  </td>
+                                  <td className="px-4 py-3 text-gray-300 font-mono text-sm">
+                                    {inscription.id.slice(0, 12)}...{inscription.id.slice(-8)}
+                                  </td>
+                                  <td className="px-4 py-3 text-gray-400 text-sm">
+                                    {inscription.content_type?.split('/')[1]?.toUpperCase() || 'Unknown'}
+                                  </td>
+                                  <td className="px-4 py-3 text-gray-400 text-sm">
+                                    {inscription.content_length ? `${(inscription.content_length / 1024).toFixed(1)} KB` : 'N/A'}
+                                  </td>
+                                  <td className="px-4 py-3">
+                                    <a
+                                      href={`https://ordinals.com/inscription/${inscription.id}`}
+                                      target="_blank"
+                                      rel="noopener noreferrer"
+                                      className="text-[#f7931a] hover:text-[#ffd166] font-semibold text-sm transition-colors"
+                                    >
+                                      View ↗
+                                    </a>
+                                  </td>
+                                </tr>
+                              ))}
+                            </tbody>
+                          </table>
+                        </div>
+                      </div>
+                    )}
+                  </>
+                ) : (
+                  <div className="text-center py-12 bg-[#111317]/90 backdrop-blur-sm rounded-2xl border-2 border-[#f7931a]/20">
+                    <div className="text-6xl mb-4">🎨</div>
+                    <div className="text-xl text-[#f7931a] mb-2">No Inscriptions Found</div>
+                    <div className="text-gray-400 mb-4">
+                      {taproot?.address ? 'This address has no inscriptions yet.' : 'Connect your wallet to view inscriptions.'}
+                    </div>
+                  </div>
+                )}
               </div>
             )}
           </>
