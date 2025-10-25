@@ -26,10 +26,8 @@ export const config = {
 
   // API Keys (MUST be set via environment variables)
   apiKeys: {
-    ordiscan: process.env.ORDISCAN_API_KEY || '',
     hiro: process.env.HIRO_API_KEY || '',
     unisat: process.env.UNISAT_API_KEY || '',
-    okx: process.env.OKX_ACCESS_KEY || '',
   },
 
   // Feature Flags

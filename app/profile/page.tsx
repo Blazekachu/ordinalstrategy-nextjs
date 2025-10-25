@@ -54,10 +54,12 @@ export default function ProfilePage() {
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<'profile' | 'addresses' | 'games' | 'leaderboard' | 'inscriptions'>('profile');
   const [inscriptions, setInscriptions] = useState<any[]>([]);
+  const [displayedInscriptions, setDisplayedInscriptions] = useState<any[]>([]);
   const [totalInscriptionCount, setTotalInscriptionCount] = useState<number>(0);
   const [loadingInscriptions, setLoadingInscriptions] = useState(false);
   const [inscriptionViewMode, setInscriptionViewMode] = useState<'grid-small' | 'list'>('grid-small');
   const [inscriptionSortOrder, setInscriptionSortOrder] = useState<'low-to-high' | 'high-to-low'>('high-to-low');
+  const [inscriptionDisplayLimit, setInscriptionDisplayLimit] = useState<number>(100);
   const [leaderboardData, setLeaderboardData] = useState<any[]>([]);
   const [leaderboardSort, setLeaderboardSort] = useState<'highScore' | 'gamesPlayed' | 'avgScore'>('highScore');
   const [loadingLeaderboard, setLoadingLeaderboard] = useState(false);
@@ -167,6 +169,11 @@ export default function ProfilePage() {
       fetchInscriptions();
     }
   }, [inscriptionSortOrder]);
+
+  // Update displayed inscriptions when limit changes or inscriptions are loaded
+  useEffect(() => {
+    setDisplayedInscriptions(inscriptions.slice(0, inscriptionDisplayLimit));
+  }, [inscriptions, inscriptionDisplayLimit]);
 
   useEffect(() => {
     if (activeTab === 'leaderboard') {
@@ -288,434 +295,59 @@ export default function ProfilePage() {
       return;
     }
     
-    console.log('🚀 MULTI-API STRATEGY: Fetching from ALL sources for:', taprootAddr);
+    console.log('🚀 Fetching ALL inscriptions (including cursed) from backend API for:', taprootAddr);
     setLoadingInscriptions(true);
     try {
-      // NEW APPROACH: Fetch from MULTIPLE APIs simultaneously and merge results
-      // This ensures we get ALL inscriptions even if one API is incomplete
+      // Use the backend API which aggregates from multiple sources
+      const response = await fetch(`/api/inscriptions?address=${taprootAddr}`);
       
-      const allInscriptionsMap = new Map(); // Use Map for instant deduplication
-      let highestTotal = 0;
+      if (!response.ok) {
+        throw new Error(`Failed to fetch inscriptions: ${response.status}`);
+      }
       
-      // ============================================
-      // API 1: Ordiscan (with AGGRESSIVE pagination)
-      // ============================================
-      const fetchOrdiscan = async () => {
-        try {
-          console.log('📡 [Ordiscan] Starting COMPLETE fetch...');
-          let offset = 0;
-          const limit = 100; // Use smaller batches for reliability
-          let count = 0;
-          let reportedTotal = 0;
-          
-          // First request to get total count
-          const firstResponse = await fetch(
-            `https://api.ordiscan.com/v1/address/${taprootAddr}/inscriptions?limit=${limit}&offset=0`,
-            {
-              headers: {
-                'Accept': 'application/json',
-                'Authorization': `Bearer ***REMOVED***`,
-              }
-            }
-          );
-          
-          if (!firstResponse.ok) {
-            console.warn('⚠️ [Ordiscan] Initial request failed');
-            return;
-          }
-          
-          const firstData = await firstResponse.json();
-          reportedTotal = firstData.total || 0;
-          highestTotal = Math.max(highestTotal, reportedTotal);
-          console.log('📊 [Ordiscan] Total inscriptions reported:', reportedTotal);
-          
-          // Process first batch
-          const firstBatch = firstData.data || [];
-          firstBatch.forEach((insc: any) => {
-            if (insc.inscription_id && !allInscriptionsMap.has(insc.inscription_id)) {
-              allInscriptionsMap.set(insc.inscription_id, {
-                id: insc.inscription_id,
-                number: insc.inscription_number,
-                address: insc.address,
-                content_type: insc.content_type,
-                content_length: insc.content_length,
-                timestamp: new Date(insc.timestamp).getTime(),
-                tx_id: insc.genesis_transaction,
-                content: `https://ordinals.com/content/${insc.inscription_id}`,
-              });
-              count++;
-            }
-          });
-          
-          // Continue fetching until we reach the reported total
-          // AGGRESSIVE: Keep going even BEYOND reported total to catch any stragglers
-          offset = limit;
-          let consecutiveEmptyBatches = 0;
-          const maxOffset = Math.max(reportedTotal + 500, 5000); // At least 5000 or total+500
-          
-          while (offset < maxOffset) {
-            const response = await fetch(
-              `https://api.ordiscan.com/v1/address/${taprootAddr}/inscriptions?limit=${limit}&offset=${offset}`,
-              {
-                headers: {
-                  'Accept': 'application/json',
-                  'Authorization': `Bearer ***REMOVED***`,
-                }
-              }
-            );
-            
-            if (!response.ok) {
-              console.warn(`⚠️ [Ordiscan] Failed at offset ${offset} (status ${response.status}), continuing...`);
-              offset += limit;
-              continue;
-            }
-            
-            const data = await response.json();
-            const batch = data.data || [];
-            
-            // Track empty batches
-            if (batch.length === 0) {
-              consecutiveEmptyBatches++;
-              console.log(`⚠️ [Ordiscan] Empty batch #${consecutiveEmptyBatches} at offset ${offset} (count: ${count}/${reportedTotal})`);
-              
-              // Only stop after 5 consecutive empty batches AND we have at least the reported total
-              if (consecutiveEmptyBatches >= 5 && count >= reportedTotal) {
-                console.log(`✅ [Ordiscan] Stopping: 5 empty batches and have ${count} inscriptions`);
-                break;
-              }
-              
-              offset += limit;
-              continue;
-            }
-            
-            // Reset empty batch counter on successful batch
-            consecutiveEmptyBatches = 0;
-            
-            // Process batch
-            let addedThisBatch = 0;
-            batch.forEach((insc: any) => {
-              if (insc.inscription_id && !allInscriptionsMap.has(insc.inscription_id)) {
-                allInscriptionsMap.set(insc.inscription_id, {
-                  id: insc.inscription_id,
-                  number: insc.inscription_number,
-                  address: insc.address,
-                  content_type: insc.content_type,
-                  content_length: insc.content_length,
-                  timestamp: new Date(insc.timestamp).getTime(),
-                  tx_id: insc.genesis_transaction,
-                  content: `https://ordinals.com/content/${insc.inscription_id}`,
-                });
-                count++;
-                addedThisBatch++;
-              }
-            });
-            
-            console.log(`📦 [Ordiscan] Offset ${offset}: fetched ${batch.length}, added ${addedThisBatch} new (total: ${count}/${reportedTotal})`);
-            
-            offset += limit;
-            
-            // Progress log every 200 inscriptions
-            if (count % 200 === 0) {
-              console.log(`📡 [Ordiscan] Progress: ${count}/${reportedTotal} inscriptions`);
-            }
-          }
-          
-          console.log(`✅ [Ordiscan] Added ${count} unique inscriptions (target was ${reportedTotal})`);
-          if (count < reportedTotal) {
-            console.warn(`⚠️ [Ordiscan] Missing ${reportedTotal - count} inscriptions!`);
-          }
-        } catch (error) {
-          console.warn('⚠️ [Ordiscan] Failed:', error);
-        }
-      };
+      const data = await response.json();
       
-      // ============================================
-      // API 2: Hiro (single request, no pagination)
-      // ============================================
-      const fetchHiro = async () => {
-        try {
-          console.log('📡 [Hiro] Starting fetch...');
-          const response = await fetch(
-            `https://api.hiro.so/ordinals/v1/inscriptions?address=${taprootAddr}&limit=60`,
-            {
-              headers: {
-                'Accept': 'application/json',
-                'x-api-key': '***REMOVED***',
-              }
-            }
-          );
-          
-          if (!response.ok) {
-            console.warn('⚠️ [Hiro] Failed with status:', response.status);
-            return;
-          }
-          
-          const data = await response.json();
-          if (data.total) {
-            highestTotal = Math.max(highestTotal, data.total);
-            console.log('📊 [Hiro] Total reported:', data.total);
-          }
-          
-          let count = 0;
-          const inscriptions = data.results || [];
-          inscriptions.forEach((insc: any) => {
-            if (insc.id && !allInscriptionsMap.has(insc.id)) {
-              allInscriptionsMap.set(insc.id, {
-                id: insc.id,
-                number: insc.number,
-                address: insc.address,
-                content_type: insc.content_type,
-                content_length: insc.content_length,
-                timestamp: insc.timestamp,
-                tx_id: insc.genesis_tx_id,
-                content: `https://ordinals.com/content/${insc.id}`,
-              });
-              count++;
-            }
-          });
-          
-          console.log(`✅ [Hiro] Added ${count} unique inscriptions`);
-        } catch (error) {
-          console.warn('⚠️ [Hiro] Failed:', error);
-        }
-      };
+      if (!data.success) {
+        throw new Error(data.error || 'Failed to fetch inscriptions');
+      }
       
-      // ============================================
-      // API 3: Unisat (with AGGRESSIVE pagination)
-      // ============================================
-      const fetchUnisat = async () => {
-        try {
-          console.log('📡 [Unisat] Starting COMPLETE fetch...');
-          let cursor = 0;
-          const size = 100; // Use smaller batches for reliability
-          let count = 0;
-          let reportedTotal = 0;
-          
-          // First request to get total
-          const firstResponse = await fetch(
-            `https://open-api.unisat.io/v1/indexer/address/${taprootAddr}/inscription-data?cursor=0&size=${size}`,
-            {
-              headers: {
-                'Accept': 'application/json',
-                'Authorization': 'Bearer ***REMOVED***',
-              }
-            }
-          );
-          
-          if (!firstResponse.ok) {
-            console.warn('⚠️ [Unisat] Initial request failed');
-            return;
-          }
-          
-          const firstData = await firstResponse.json();
-          reportedTotal = firstData.data?.total || 0;
-          highestTotal = Math.max(highestTotal, reportedTotal);
-          console.log('📊 [Unisat] Total inscriptions reported:', reportedTotal);
-          
-          // Process first batch
-          const firstBatch = firstData.data?.inscription || [];
-          firstBatch.forEach((insc: any) => {
-            if (insc.inscriptionId && !allInscriptionsMap.has(insc.inscriptionId)) {
-              allInscriptionsMap.set(insc.inscriptionId, {
-                id: insc.inscriptionId,
-                number: insc.inscriptionNumber,
-                address: insc.address,
-                content_type: insc.contentType,
-                content_length: insc.contentLength,
-                timestamp: insc.timestamp,
-                tx_id: insc.genesisTransaction,
-                content: `https://ordinals.com/content/${insc.inscriptionId}`,
-              });
-              count++;
-            }
-          });
-          
-          // Continue fetching until we reach the reported total
-          cursor = size;
-          while (cursor < reportedTotal && cursor < 50000) { // Safety limit at 50k
-            const response = await fetch(
-              `https://open-api.unisat.io/v1/indexer/address/${taprootAddr}/inscription-data?cursor=${cursor}&size=${size}`,
-              {
-                headers: {
-                  'Accept': 'application/json',
-                  'Authorization': 'Bearer ***REMOVED***',
-                }
-              }
-            );
-            
-            if (!response.ok) {
-              console.warn(`⚠️ [Unisat] Failed at cursor ${cursor}, continuing...`);
-              cursor += size;
-              continue;
-            }
-            
-            const data = await response.json();
-            const batch = data.data?.inscription || [];
-            
-            if (batch.length === 0 && cursor < reportedTotal - size) {
-              console.log(`⚠️ [Unisat] Empty batch at cursor ${cursor}, but total is ${reportedTotal}. Continuing...`);
-              cursor += size;
-              continue;
-            }
-            
-            if (batch.length === 0) {
-              console.log(`✅ [Unisat] Reached end at cursor ${cursor}`);
-              break;
-            }
-            
-            batch.forEach((insc: any) => {
-              if (insc.inscriptionId && !allInscriptionsMap.has(insc.inscriptionId)) {
-                allInscriptionsMap.set(insc.inscriptionId, {
-                  id: insc.inscriptionId,
-                  number: insc.inscriptionNumber,
-                  address: insc.address,
-                  content_type: insc.contentType,
-                  content_length: insc.contentLength,
-                  timestamp: insc.timestamp,
-                  tx_id: insc.genesisTransaction,
-                  content: `https://ordinals.com/content/${insc.inscriptionId}`,
-                });
-                count++;
-              }
-            });
-            
-            cursor += size;
-            
-            if (count % 500 === 0) {
-              console.log(`📡 [Unisat] Progress: ${count}/${reportedTotal} inscriptions`);
-            }
-          }
-          
-          console.log(`✅ [Unisat] Added ${count} unique inscriptions (target was ${reportedTotal})`);
-          if (count < reportedTotal) {
-            console.warn(`⚠️ [Unisat] Missing ${reportedTotal - count} inscriptions!`);
-          }
-        } catch (error) {
-          console.warn('⚠️ [Unisat] Failed:', error);
-        }
-      };
-      
-      // ============================================
-      // API 4: OKX (as backup)
-      // ============================================
-      const fetchOKX = async () => {
-        try {
-          console.log('📡 [OKX] Starting fetch...');
-          let page = 1;
-          const limit = 100;
-          let hasMore = true;
-          let count = 0;
-          
-          while (hasMore && page <= 50) { // Up to 50 pages (5000 inscriptions)
-            const response = await fetch(
-              `https://www.okx.com/api/v5/explorer/inscription/inscription-list-by-address?address=${taprootAddr}&limit=${limit}&page=${page}`,
-              {
-                headers: {
-                  'Accept': 'application/json',
-                  'Ok-Access-Key': '***REMOVED***',
-                }
-              }
-            );
-            
-            if (!response.ok) {
-              console.warn(`⚠️ [OKX] Failed at page ${page}`);
-              break;
-            }
-            
-            const data = await response.json();
-            if (page === 1 && data.data?.total) {
-              const okxTotal = parseInt(data.data.total);
-              highestTotal = Math.max(highestTotal, okxTotal);
-              console.log('📊 [OKX] Total reported:', okxTotal);
-            }
-            
-            const batch = data.data?.inscriptionsList || [];
-            if (batch.length === 0) break;
-            
-            batch.forEach((insc: any) => {
-              const inscId = insc.inscriptionId || insc.inscription_id;
-              if (inscId && !allInscriptionsMap.has(inscId)) {
-                allInscriptionsMap.set(inscId, {
-                  id: inscId,
-                  number: insc.inscriptionNumber || insc.inscription_number,
-                  address: insc.ownerAddress || insc.address,
-                  content_type: insc.contentType || insc.content_type,
-                  content_length: insc.contentSize || insc.content_length,
-                  timestamp: insc.blockTime || insc.timestamp,
-                  tx_id: insc.genesisTx || insc.tx_id,
-                  content: `https://ordinals.com/content/${inscId}`,
-                });
-                count++;
-              }
-            });
-            
-            page++;
-            if (batch.length < limit) hasMore = false;
-          }
-          
-          console.log(`✅ [OKX] Added ${count} unique inscriptions (fetched ${page-1} pages)`);
-        } catch (error) {
-          console.warn('⚠️ [OKX] Failed:', error);
-        }
-      };
-      
-      // Execute all APIs in parallel
-      console.log('🔄 Fetching from ALL 4 APIs simultaneously...');
-      await Promise.all([
-        fetchOrdiscan(),
-        fetchHiro(),
-        fetchUnisat(),
-        fetchOKX(),
-      ]);
-      
-      // Convert Map to array
-      let fetchedInscriptions = Array.from(allInscriptionsMap.values());
+      let fetchedInscriptions = data.inscriptions || [];
+      const highestTotal = data.total || fetchedInscriptions.length;
       
       // Analyze what we got
-      const cursedInscriptions = fetchedInscriptions.filter(i => i.number < 0);
-      const normalInscriptions = fetchedInscriptions.filter(i => i.number >= 0);
+      const cursedInscriptions = fetchedInscriptions.filter((i: any) => i.number < 0);
+      const normalInscriptions = fetchedInscriptions.filter((i: any) => i.number >= 0);
       
-      // Find the range of inscription numbers
-      const allNumbers = fetchedInscriptions.map(i => i.number).filter(n => n != null);
-      const highestNumber = allNumbers.length > 0 ? Math.max(...allNumbers) : 0;
-      const lowestNumber = allNumbers.length > 0 ? Math.min(...allNumbers) : 0;
+      console.log('🎉 Backend API Results:');
+      console.log(`   - Total inscriptions: ${fetchedInscriptions.length}`);
+      console.log(`   - Normal: ${normalInscriptions.length}`);
+      console.log(`   - Cursed: ${cursedInscriptions.length}`);
+      console.log(`   - Reported total: ${highestTotal}`);
       
-      console.log('🎉 FINAL RESULTS:');
-      console.log(`   - Total unique inscriptions: ${fetchedInscriptions.length}`);
-      console.log(`   - Normal inscriptions: ${normalInscriptions.length} (range: 0 to #${highestNumber})`);
-      console.log(`   - Cursed inscriptions: ${cursedInscriptions.length} (range: #${lowestNumber} to #-1)`);
-      console.log(`   - Highest reported total: ${highestTotal}`);
-      console.log(`   - Potential missing: ${Math.max(0, highestTotal - fetchedInscriptions.length)}`);
-      
-      const finalTotal = Math.max(highestTotal, fetchedInscriptions.length);
-      
-      // CRITICAL: Explicitly sort by inscription number
-      // Don't rely on API order - merge from multiple sources means mixed order
-      fetchedInscriptions.sort((a, b) => {
-        // Handle null/undefined numbers
+      // Sort by inscription number
+      fetchedInscriptions.sort((a: any, b: any) => {
         const numA = a.number ?? -Infinity;
         const numB = b.number ?? -Infinity;
         
         if (inscriptionSortOrder === 'low-to-high') {
-          // Low to high: lowest number first
-          return numA - numB;
+          return numA - numB; // Lowest first (cursed will be at top)
         } else {
-          // High to low: highest number first (default)
-          return numB - numA;
+          return numB - numA; // Highest first (newest at top)
         }
       });
       
       console.log('✅ Sorted inscriptions:', inscriptionSortOrder);
       if (fetchedInscriptions.length > 0) {
-        console.log(`   - First inscription #: ${fetchedInscriptions[0].number}`);
-        console.log(`   - Last inscription #: ${fetchedInscriptions[fetchedInscriptions.length - 1].number}`);
+        console.log(`   - First #: ${fetchedInscriptions[0].number}`);
+        console.log(`   - Last #: ${fetchedInscriptions[fetchedInscriptions.length - 1].number}`);
       }
       
+      // Store all inscriptions and set display limit
       setInscriptions(fetchedInscriptions);
-      setTotalInscriptionCount(finalTotal); // Use the calculated final total
+      setTotalInscriptionCount(highestTotal);
+      setInscriptionDisplayLimit(100); // Start with showing 100
       
-      console.log('🎯 Updated state with', fetchedInscriptions.length, 'inscriptions to display');
-      console.log('🎯 Total count set to:', finalTotal);
+      console.log('🎯 Loaded', fetchedInscriptions.length, 'inscriptions')
     } catch (error) {
       console.error('Error fetching inscriptions:', error);
       // If API fails, show a helpful message but don't set count to 0
@@ -1449,7 +1081,7 @@ export default function ProfilePage() {
                     {/* Grid View (Small) */}
                     {inscriptionViewMode === 'grid-small' && (
                       <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 xl:grid-cols-8 gap-3">
-                        {inscriptions.map((inscription: any) => (
+                        {displayedInscriptions.map((inscription: any) => (
                           <div
                             key={inscription.id}
                             className="group bg-gradient-to-br from-[#111317]/90 to-[#1b1c1f]/90 backdrop-blur-sm rounded-lg border-2 border-[#f7931a]/20 hover:border-[#f7931a]/60 hover:shadow-[0_5px_20px_rgba(247,147,26,0.2)] hover:-translate-y-1 transition-all duration-300 overflow-hidden"
@@ -1502,6 +1134,22 @@ export default function ProfilePage() {
                               <div className="text-[#f7931a] font-bold text-xs truncate">
                                 #{inscription.number?.toLocaleString() || 'N/A'}
                               </div>
+                              {inscription.charms && inscription.charms.length > 0 && (
+                                <div className="flex flex-wrap gap-1 mt-1">
+                                  {inscription.charms.map((charm: string, idx: number) => (
+                                    <span key={idx} className="text-[10px] bg-[#f7931a]/20 text-[#ffd166] px-1 rounded" title={charm}>
+                                      {charm === 'cursed' && '👻'}
+                                      {charm === 'vindicated' && '🎊'}
+                                      {charm === 'coin' && '🪙'}
+                                      {charm === 'uncommon' && '💎'}
+                                      {charm === 'rare' && '⭐'}
+                                      {charm === 'epic' && '🔥'}
+                                      {charm === 'legendary' && '👑'}
+                                      {charm === 'mythic' && '✨'}
+                                    </span>
+                                  ))}
+                                </div>
+                              )}
                             </div>
                           </div>
                         ))}
@@ -1519,11 +1167,12 @@ export default function ProfilePage() {
                                 <th className="px-4 py-3 text-left text-[#f7931a] font-semibold text-sm">ID</th>
                                 <th className="px-4 py-3 text-left text-[#f7931a] font-semibold text-sm">Type</th>
                                 <th className="px-4 py-3 text-left text-[#f7931a] font-semibold text-sm">Size</th>
+                                <th className="px-4 py-3 text-left text-[#f7931a] font-semibold text-sm">Charms</th>
                                 <th className="px-4 py-3 text-left text-[#f7931a] font-semibold text-sm">Action</th>
                               </tr>
                             </thead>
                             <tbody>
-                              {inscriptions.map((inscription: any) => (
+                              {displayedInscriptions.map((inscription: any) => (
                                 <tr
                                   key={inscription.id}
                                   className="border-t border-gray-700 hover:bg-[#1b1c1f]/30 transition-colors"
@@ -1541,6 +1190,26 @@ export default function ProfilePage() {
                                     {inscription.content_length ? `${(inscription.content_length / 1024).toFixed(1)} KB` : 'N/A'}
                                   </td>
                                   <td className="px-4 py-3">
+                                    {inscription.charms && inscription.charms.length > 0 ? (
+                                      <div className="flex flex-wrap gap-1">
+                                        {inscription.charms.map((charm: string, idx: number) => (
+                                          <span key={idx} className="text-sm" title={charm}>
+                                            {charm === 'cursed' && '👻'}
+                                            {charm === 'vindicated' && '🎊'}
+                                            {charm === 'coin' && '🪙'}
+                                            {charm === 'uncommon' && '💎'}
+                                            {charm === 'rare' && '⭐'}
+                                            {charm === 'epic' && '🔥'}
+                                            {charm === 'legendary' && '👑'}
+                                            {charm === 'mythic' && '✨'}
+                                          </span>
+                                        ))}
+                                      </div>
+                                    ) : (
+                                      <span className="text-gray-600 text-sm">-</span>
+                                    )}
+                                  </td>
+                                  <td className="px-4 py-3">
                                     <a
                                       href={`https://ordinals.com/inscription/${inscription.id}`}
                                       target="_blank"
@@ -1555,6 +1224,25 @@ export default function ProfilePage() {
                             </tbody>
                           </table>
                         </div>
+                      </div>
+                    )}
+
+                    {/* Load More Button */}
+                    {inscriptionDisplayLimit < inscriptions.length && (
+                      <div className="text-center">
+                        <button
+                          onClick={() => setInscriptionDisplayLimit(prev => Math.min(prev + 100, inscriptions.length))}
+                          className="bg-gradient-to-r from-[#f7931a] to-[#ffd166] text-[#0b0c10] px-8 py-3 rounded-full font-bold hover:shadow-[0_5px_20px_rgba(247,147,26,0.4)] hover:scale-105 transition-all duration-300"
+                        >
+                          Load More ({displayedInscriptions.length.toLocaleString()} / {inscriptions.length.toLocaleString()})
+                        </button>
+                      </div>
+                    )}
+
+                    {/* All Loaded Message */}
+                    {inscriptionDisplayLimit >= inscriptions.length && inscriptions.length > 100 && (
+                      <div className="text-center py-4 text-gray-400">
+                        ✓ All {inscriptions.length.toLocaleString()} inscriptions loaded
                       </div>
                     )}
                   </>

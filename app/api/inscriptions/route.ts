@@ -4,10 +4,8 @@ export const dynamic = 'force-dynamic';
 
 // API Keys from environment variables (SECURE)
 const API_KEYS = {
-  ordiscan: process.env.ORDISCAN_API_KEY || '',
   hiro: process.env.HIRO_API_KEY || '',
   unisat: process.env.UNISAT_API_KEY || '',
-  okx: process.env.OKX_ACCESS_KEY || '',
 };
 
 export async function GET(request: Request) {
@@ -25,79 +23,7 @@ export async function GET(request: Request) {
     let highestTotal = 0;
 
     // ============================================
-    // API 1: Ordiscan (with proper pagination)
-    // ============================================
-    try {
-      console.log('📡 [Backend/Ordiscan] Starting fetch...');
-      let page = 0;
-      const size = 100;
-      let hasMore = true;
-      let count = 0;
-      let reportedTotal = 0;
-
-      while (hasMore && page < 100) { // Max 100 pages = 10,000 inscriptions
-        const response = await fetch(
-          `https://api.ordiscan.com/v1/address/${address}/inscriptions?size=${size}&page=${page}`,
-          {
-            headers: {
-              'Accept': 'application/json',
-              'Authorization': API_KEYS.ordiscan ? `Bearer ${API_KEYS.ordiscan}` : '',
-            },
-          }
-        );
-
-        if (!response.ok) {
-          console.warn(`⚠️ [Backend/Ordiscan] Failed at page ${page}: ${response.status}`);
-          break;
-        }
-
-        const data = await response.json();
-        
-        if (page === 0) {
-          reportedTotal = data.total || 0;
-          highestTotal = Math.max(highestTotal, reportedTotal);
-          console.log(`📊 [Backend/Ordiscan] Total: ${reportedTotal}`);
-        }
-
-        const inscriptions = data.data || [];
-        if (inscriptions.length === 0) break;
-
-        inscriptions.forEach((insc: any) => {
-          if (insc.inscription_id && !allInscriptionsMap.has(insc.inscription_id)) {
-            // Calculate charms
-            const charms: string[] = [];
-            if (insc.inscription_number < 0) charms.push('cursed');
-            
-            allInscriptionsMap.set(insc.inscription_id, {
-              id: insc.inscription_id,
-              number: insc.inscription_number,
-              address: insc.address,
-              content_type: insc.content_type,
-              content_length: insc.content_length,
-              timestamp: new Date(insc.timestamp).getTime(),
-              tx_id: insc.genesis_transaction,
-              content: `https://ordinals.com/content/${insc.inscription_id}`,
-              charms: charms,
-              sat: insc.sat,
-            });
-            count++;
-          }
-        });
-
-        page++;
-        if (inscriptions.length < size) hasMore = false;
-        if (count >= reportedTotal) hasMore = false; // Stop when we have all
-      }
-
-      const blessed = Array.from(allInscriptionsMap.values()).filter(i => i.number >= 0).length;
-      const cursed = Array.from(allInscriptionsMap.values()).filter(i => i.number < 0).length;
-      console.log(`✅ [Backend/Ordiscan] Added ${count} inscriptions (${blessed} blessed, ${cursed} cursed)`);
-    } catch (error) {
-      console.warn('⚠️ [Backend/Ordiscan] Failed:', error);
-    }
-
-    // ============================================
-    // API 2: Unisat (server-side, bypasses CORS)
+    // API 1: Unisat (server-side, bypasses CORS)
     // ============================================
     try {
       console.log('📡 [Backend/Unisat] Starting fetch...');
@@ -168,7 +94,7 @@ export async function GET(request: Request) {
     }
 
     // ============================================
-    // API 3: Hiro (with pagination for ALL inscriptions including blessed AND cursed)
+    // API 2: Hiro (with pagination for ALL inscriptions including blessed AND cursed)
     // ============================================
     try {
       console.log('📡 [Backend/Hiro] Starting fetch with pagination...');
@@ -315,7 +241,7 @@ export async function GET(request: Request) {
     }
 
     // ============================================
-    // API 4: Magic Eden (120 req/min - excellent for all inscriptions including cursed)
+    // API 3: Magic Eden (no auth required - excellent for all inscriptions including cursed)
     // ============================================
     try {
       console.log('📡 [Backend/MagicEden] Fetching inscriptions...');
