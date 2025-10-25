@@ -24,12 +24,12 @@ export const config = {
     appSecret: process.env.PRIVY_APP_SECRET || '',
   },
 
-  // API Keys (optional)
+  // API Keys (MUST be set via environment variables)
   apiKeys: {
-    ordiscan: process.env.ORDISCAN_API_KEY || '***REMOVED***',
-    hiro: process.env.HIRO_API_KEY || '***REMOVED***',
-    unisat: process.env.UNISAT_API_KEY || '***REMOVED***',
-    okx: process.env.OKX_ACCESS_KEY || '***REMOVED***',
+    ordiscan: process.env.ORDISCAN_API_KEY || '',
+    hiro: process.env.HIRO_API_KEY || '',
+    unisat: process.env.UNISAT_API_KEY || '',
+    okx: process.env.OKX_ACCESS_KEY || '',
   },
 
   // Feature Flags

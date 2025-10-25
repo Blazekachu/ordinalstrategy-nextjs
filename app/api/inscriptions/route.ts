@@ -2,6 +2,14 @@ import { NextResponse } from 'next/server';
 
 export const dynamic = 'force-dynamic';
 
+// API Keys from environment variables (SECURE)
+const API_KEYS = {
+  ordiscan: process.env.ORDISCAN_API_KEY || '',
+  hiro: process.env.HIRO_API_KEY || '',
+  unisat: process.env.UNISAT_API_KEY || '',
+  okx: process.env.OKX_ACCESS_KEY || '',
+};
+
 export async function GET(request: Request) {
   try {
     const { searchParams } = new URL(request.url);
@@ -33,7 +41,7 @@ export async function GET(request: Request) {
           {
             headers: {
               'Accept': 'application/json',
-              'Authorization': `Bearer ***REMOVED***`,
+              'Authorization': API_KEYS.ordiscan ? `Bearer ${API_KEYS.ordiscan}` : '',
             },
           }
         );
@@ -56,6 +64,10 @@ export async function GET(request: Request) {
 
         inscriptions.forEach((insc: any) => {
           if (insc.inscription_id && !allInscriptionsMap.has(insc.inscription_id)) {
+            // Calculate charms
+            const charms: string[] = [];
+            if (insc.inscription_number < 0) charms.push('cursed');
+            
             allInscriptionsMap.set(insc.inscription_id, {
               id: insc.inscription_id,
               number: insc.inscription_number,
@@ -65,6 +77,8 @@ export async function GET(request: Request) {
               timestamp: new Date(insc.timestamp).getTime(),
               tx_id: insc.genesis_transaction,
               content: `https://ordinals.com/content/${insc.inscription_id}`,
+              charms: charms,
+              sat: insc.sat,
             });
             count++;
           }
@@ -75,7 +89,9 @@ export async function GET(request: Request) {
         if (count >= reportedTotal) hasMore = false; // Stop when we have all
       }
 
-      console.log(`✅ [Backend/Ordiscan] Added ${count} inscriptions`);
+      const blessed = Array.from(allInscriptionsMap.values()).filter(i => i.number >= 0).length;
+      const cursed = Array.from(allInscriptionsMap.values()).filter(i => i.number < 0).length;
+      console.log(`✅ [Backend/Ordiscan] Added ${count} inscriptions (${blessed} blessed, ${cursed} cursed)`);
     } catch (error) {
       console.warn('⚠️ [Backend/Ordiscan] Failed:', error);
     }
@@ -96,7 +112,7 @@ export async function GET(request: Request) {
           {
             headers: {
               'Accept': 'application/json',
-              'Authorization': 'Bearer ***REMOVED***',
+              'Authorization': API_KEYS.unisat ? `Bearer ${API_KEYS.unisat}` : '',
             },
           }
         );
@@ -119,6 +135,10 @@ export async function GET(request: Request) {
 
         inscriptions.forEach((insc: any) => {
           if (insc.inscriptionId && !allInscriptionsMap.has(insc.inscriptionId)) {
+            // Calculate charms
+            const charms: string[] = [];
+            if (insc.inscriptionNumber < 0) charms.push('cursed');
+            
             allInscriptionsMap.set(insc.inscriptionId, {
               id: insc.inscriptionId,
               number: insc.inscriptionNumber,
@@ -128,6 +148,8 @@ export async function GET(request: Request) {
               timestamp: insc.timestamp,
               tx_id: insc.genesisTransaction,
               content: `https://ordinals.com/content/${insc.inscriptionId}`,
+              charms: charms,
+              sat: insc.sat,
             });
             count++;
           }
@@ -138,37 +160,71 @@ export async function GET(request: Request) {
         if (count >= reportedTotal) break;
       }
 
-      console.log(`✅ [Backend/Unisat] Added ${count} inscriptions`);
+      const blessed = Array.from(allInscriptionsMap.values()).filter(i => i.number >= 0).length;
+      const cursed = Array.from(allInscriptionsMap.values()).filter(i => i.number < 0).length;
+      console.log(`✅ [Backend/Unisat] Added ${count} inscriptions (${blessed} blessed, ${cursed} cursed)`);
     } catch (error) {
       console.warn('⚠️ [Backend/Unisat] Failed:', error);
     }
 
     // ============================================
-    // API 3: Hiro (as backup)
+    // API 3: Hiro (with pagination for ALL inscriptions including blessed AND cursed)
     // ============================================
     try {
-      console.log('📡 [Backend/Hiro] Starting fetch...');
-      const response = await fetch(
-        `https://api.hiro.so/ordinals/v1/inscriptions?address=${address}&limit=60`,
-        {
-          headers: {
-            'Accept': 'application/json',
-            'x-api-key': '***REMOVED***',
-          },
-        }
-      );
+      console.log('📡 [Backend/Hiro] Starting fetch with pagination...');
+      let normalCount = 0;
+      let cursedCount = 0;
+      
+      // Fetch BLESSED (normal) inscriptions
+      let offset = 0;
+      const limit = 60;
+      let hasMore = true;
+      let reportedTotal = 0;
 
-      if (response.ok) {
+      console.log('📡 [Backend/Hiro] Fetching blessed inscriptions...');
+      while (hasMore && offset < 50000) {
+        const response = await fetch(
+          `https://api.hiro.so/ordinals/v1/inscriptions?address=${address}&limit=${limit}&offset=${offset}`,
+          {
+            headers: {
+              'Accept': 'application/json',
+              'x-api-key': API_KEYS.hiro,
+            },
+          }
+        );
+
+        if (!response.ok) {
+          console.warn(`⚠️ [Backend/Hiro] Failed at offset ${offset}: ${response.status}`);
+          break;
+        }
+
         const data = await response.json();
-        if (data.total) {
-          highestTotal = Math.max(highestTotal, data.total);
-          console.log(`📊 [Backend/Hiro] Total: ${data.total}`);
+        
+        if (offset === 0) {
+          reportedTotal = data.total || 0;
+          highestTotal = Math.max(highestTotal, reportedTotal);
+          console.log(`📊 [Backend/Hiro] Total blessed: ${reportedTotal}`);
         }
 
-        let count = 0;
         const inscriptions = data.results || [];
+        if (inscriptions.length === 0) break;
+
         inscriptions.forEach((insc: any) => {
           if (insc.id && !allInscriptionsMap.has(insc.id)) {
+            // Calculate charms
+            const charms: string[] = [];
+            if (insc.number < 0) charms.push('cursed');
+            if (insc.charms) {
+              // If API provides charms directly
+              if (Array.isArray(insc.charms)) {
+                charms.push(...insc.charms);
+              }
+            }
+            // Check for vindicated (cursed but after Jubilee - block 820000)
+            if (insc.number < 0 && insc.sat_block_height && insc.sat_block_height >= 820000) {
+              charms.push('vindicated');
+            }
+            
             allInscriptionsMap.set(insc.id, {
               id: insc.id,
               number: insc.number,
@@ -178,14 +234,149 @@ export async function GET(request: Request) {
               timestamp: insc.timestamp,
               tx_id: insc.genesis_tx_id,
               content: `https://ordinals.com/content/${insc.id}`,
+              charms: charms,
+              sat: insc.sat,
+            });
+            normalCount++;
+          }
+        });
+
+        offset += limit;
+        if (inscriptions.length < limit) hasMore = false;
+        if (normalCount >= reportedTotal) hasMore = false;
+      }
+
+      // Fetch CURSED inscriptions separately
+      offset = 0;
+      hasMore = true;
+      let cursedTotal = 0;
+
+      console.log('📡 [Backend/Hiro] Fetching cursed inscriptions...');
+      while (hasMore && offset < 50000) {
+        // Try with cursed=true parameter
+        const response = await fetch(
+          `https://api.hiro.so/ordinals/v1/inscriptions?address=${address}&limit=${limit}&offset=${offset}&cursed=true`,
+          {
+            headers: {
+              'Accept': 'application/json',
+              'x-api-key': API_KEYS.hiro,
+            },
+          }
+        );
+
+        if (!response.ok) {
+          console.warn(`⚠️ [Backend/Hiro] Cursed fetch failed at offset ${offset}: ${response.status}`);
+          break;
+        }
+
+        const data = await response.json();
+        
+        if (offset === 0) {
+          cursedTotal = data.total || 0;
+          highestTotal = Math.max(highestTotal, reportedTotal + cursedTotal);
+          console.log(`📊 [Backend/Hiro] Total cursed: ${cursedTotal}`);
+        }
+
+        const inscriptions = data.results || [];
+        if (inscriptions.length === 0) break;
+
+        inscriptions.forEach((insc: any) => {
+          if (insc.id && !allInscriptionsMap.has(insc.id)) {
+            // Calculate charms for cursed inscriptions
+            const charms: string[] = ['cursed'];
+            if (insc.charms && Array.isArray(insc.charms)) {
+              charms.push(...insc.charms.filter((c: string) => c !== 'cursed'));
+            }
+            
+            allInscriptionsMap.set(insc.id, {
+              id: insc.id,
+              number: insc.number,
+              address: insc.address,
+              content_type: insc.content_type,
+              content_length: insc.content_length,
+              timestamp: insc.timestamp,
+              tx_id: insc.genesis_tx_id,
+              content: `https://ordinals.com/content/${insc.id}`,
+              charms: charms,
+              sat: insc.sat,
+            });
+            cursedCount++;
+          }
+        });
+
+        offset += limit;
+        if (inscriptions.length < limit) hasMore = false;
+        if (cursedCount >= cursedTotal) hasMore = false;
+      }
+
+      console.log(`✅ [Backend/Hiro] Added ${normalCount} blessed + ${cursedCount} cursed = ${normalCount + cursedCount} total inscriptions`);
+    } catch (error) {
+      console.warn('⚠️ [Backend/Hiro] Failed:', error);
+    }
+
+    // ============================================
+    // API 4: Magic Eden (120 req/min - excellent for all inscriptions including cursed)
+    // ============================================
+    try {
+      console.log('📡 [Backend/MagicEden] Fetching inscriptions...');
+      let offset = 0;
+      const limit = 100;
+      let hasMore = true;
+      let count = 0;
+
+      while (hasMore && offset < 10000) { // Safety limit at 10k
+        const response = await fetch(
+          `https://api-mainnet.magiceden.io/v2/btc/wallets/${address}/tokens?limit=${limit}&offset=${offset}`,
+          {
+            headers: {
+              'Accept': 'application/json',
+            },
+          }
+        );
+
+        if (!response.ok) {
+          console.warn(`⚠️ [Backend/MagicEden] Failed at offset ${offset}: ${response.status}`);
+          break;
+        }
+
+        const data = await response.json();
+        const inscriptions = data.tokens || data || [];
+        
+        if (inscriptions.length === 0) break;
+
+        inscriptions.forEach((insc: any) => {
+          const inscId = insc.id || insc.inscriptionId;
+          if (inscId && !allInscriptionsMap.has(inscId)) {
+            // Calculate charms
+            const charms: string[] = [];
+            const inscNum = insc.inscriptionNumber || insc.number;
+            if (inscNum < 0) charms.push('cursed');
+            
+            allInscriptionsMap.set(inscId, {
+              id: inscId,
+              number: inscNum,
+              address: insc.owner || address,
+              content_type: insc.contentType || insc.content_type,
+              content_length: insc.contentLength || insc.content_length,
+              timestamp: insc.timestamp || insc.genesisTimestamp,
+              tx_id: insc.genesisTx || insc.genesis_tx_id,
+              content: `https://ordinals.com/content/${inscId}`,
+              charms: charms,
+              sat: insc.sat,
             });
             count++;
           }
         });
-        console.log(`✅ [Backend/Hiro] Added ${count} inscriptions`);
+
+        offset += limit;
+        if (inscriptions.length < limit) hasMore = false;
       }
+
+      const blessed = Array.from(allInscriptionsMap.values()).filter(i => i.number >= 0).length;
+      const cursed = Array.from(allInscriptionsMap.values()).filter(i => i.number < 0).length;
+      console.log(`✅ [Backend/MagicEden] Added ${count} new inscriptions (total now: ${blessed} blessed, ${cursed} cursed)`);
     } catch (error) {
-      console.warn('⚠️ [Backend/Hiro] Failed:', error);
+      console.warn('⚠️ [Backend/MagicEden] Failed:', error);
     }
 
     // Convert to array and analyze
