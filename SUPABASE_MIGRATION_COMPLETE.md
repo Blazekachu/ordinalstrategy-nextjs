@@ -73,9 +73,9 @@ All API routes updated to use Supabase:
 Make sure these are set in your `.env.local` (local) and Vercel (production):
 
 ```env
-SUPABASE_URL=***REMOVED***
-SUPABASE_ANON_KEY=***REMOVED***
-SUPABASE_SERVICE_KEY=***REMOVED***
+SUPABASE_URL=your_supabase_project_url_here
+SUPABASE_ANON_KEY=your_supabase_anon_key_here
+SUPABASE_SERVICE_KEY=your_supabase_service_key_here
 ```
 
 ---
